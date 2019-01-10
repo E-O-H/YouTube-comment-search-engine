@@ -168,8 +168,6 @@ public class YoutubeIndexer {
       Comment ret = new Comment();
       
       ret.commentId = jsonObj.get("id").getAsString();
-      ret.videoId = jsonObj.get("snippet").getAsJsonObject()
-                           .get("videoId").getAsString();
       ret.userName = jsonObj.get("snippet").getAsJsonObject()
                             .get("topLevelComment").getAsJsonObject()
                             .get("snippet").getAsJsonObject()
@@ -201,6 +199,14 @@ public class YoutubeIndexer {
                              .get("likeCount").getAsInt();
       ret.replyCount = jsonObj.get("snippet").getAsJsonObject()
                               .get("totalReplyCount").getAsInt();
+      // Optional Fields
+      // If a comment is on a channel instead of a video, there would be no videoId.
+      try {
+        ret.videoId = jsonObj.get("snippet").getAsJsonObject()
+                             .get("videoId").getAsString();
+      } catch (NullPointerException e) {
+        // Do nothing
+      }
       
       return ret;
     }
@@ -250,7 +256,7 @@ public class YoutubeIndexer {
   public void buildCommentIndex(Scope scope, String scopeId) {
     initialize();
     JsonArray topLevelComments = downloadComments(scope, scopeId);
-    for (int i = 0; i < topLevelComments.size(); ++i) {
+    for (int i = 0; i < topLevelComments.size() - 1; ++i) {
       Comment comment = Comment.parseTopLevelComment(topLevelComments.get(i).getAsJsonObject());
       
       
