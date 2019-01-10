@@ -87,6 +87,139 @@ public class YoutubeIndexer {
     return commentsArrayObj;
   }
   
+  static class Comment {
+    private String commentId;
+    private String parentId;
+    private String userId;
+    private String userName;
+    private String profilePicture;
+    private String videoId;
+    private String commentText;
+    private String publishTime;
+    private String updateTime;
+    private int likeCount;
+    private int replyCount;
+    
+    private Comment() {
+      commentId = null;
+      parentId = null;
+      userId = null;
+      userName = null;
+      profilePicture = null;
+      videoId = null;
+      commentText = null;
+      publishTime = null;
+      updateTime = null;
+      likeCount = 0;
+      replyCount = 0;
+    }
+
+    public final String getCommentId() {
+      return commentId;
+    }
+
+    public final String getParentId() {
+      return parentId;
+    }
+
+    public final String getUserId() {
+      return userId;
+    }
+
+    public final String getUserName() {
+      return userName;
+    }
+
+    public final String getProfilePicture() {
+      return profilePicture;
+    }
+
+    public final String getVideoId() {
+      return videoId;
+    }
+    
+    public final String getCommentText() {
+      return commentText;
+    }
+
+    public final String getPublishTime() {
+      return publishTime;
+    }
+
+    public final String getUpdateTime() {
+      return updateTime;
+    }
+
+    public final int getLikeCount() {
+      return likeCount;
+    }
+
+    public final int getReplyCount() {
+      return replyCount;
+    }
+    
+    /**
+     * Factory method for making a top-level comment
+     * 
+     * @param jsonObj JSON object for a top-level comment
+     * @return Comment object
+     */
+    public static Comment parseTopLevelComment(JsonObject jsonObj) {
+      Comment ret = new Comment();
+      
+      ret.commentId = jsonObj.get("id").getAsString();
+      ret.videoId = jsonObj.get("snippet").getAsJsonObject()
+                           .get("videoId").getAsString();
+      ret.userName = jsonObj.get("snippet").getAsJsonObject()
+                            .get("topLevelComment").getAsJsonObject()
+                            .get("snippet").getAsJsonObject()
+                            .get("authorDisplayName").getAsString();
+      ret.profilePicture = jsonObj.get("snippet").getAsJsonObject()
+                                  .get("topLevelComment").getAsJsonObject()
+                                  .get("snippet").getAsJsonObject()
+                                  .get("authorProfileImageUrl").getAsString();
+      ret.userId = jsonObj.get("snippet").getAsJsonObject()
+                          .get("topLevelComment").getAsJsonObject()
+                          .get("snippet").getAsJsonObject()
+                          .get("authorChannelId").getAsJsonObject()
+                          .get("value").getAsString();
+      ret.commentText = jsonObj.get("snippet").getAsJsonObject()
+                               .get("topLevelComment").getAsJsonObject()
+                               .get("snippet").getAsJsonObject()
+                               .get("textDisplay").getAsString();
+      ret.publishTime = jsonObj.get("snippet").getAsJsonObject()
+                               .get("topLevelComment").getAsJsonObject()
+                               .get("snippet").getAsJsonObject()
+                               .get("publishedAt").getAsString();
+      ret.updateTime = jsonObj.get("snippet").getAsJsonObject()
+                              .get("topLevelComment").getAsJsonObject()
+                              .get("snippet").getAsJsonObject()
+                              .get("updatedAt").getAsString();
+      ret.likeCount = jsonObj.get("snippet").getAsJsonObject()
+                             .get("topLevelComment").getAsJsonObject()
+                             .get("snippet").getAsJsonObject()
+                             .get("likeCount").getAsInt();
+      ret.replyCount = jsonObj.get("snippet").getAsJsonObject()
+                              .get("totalReplyCount").getAsInt();
+      
+      return ret;
+    }
+    
+    /**
+     * Factory method for making a reply comment
+     * 
+     * @param json JSON object for a reply comment
+     * @return Comment object
+     */
+    public static Comment parseReplyComment(JsonObject json) {
+      Comment ret = new Comment();
+      
+      
+      return ret;
+    }
+    
+  }
+  
   private static void addDoc(IndexWriter indexWriter, String commentId, String parentId, 
                              String userId, String userName, String profilePicture, 
                              String videoId, int likeCount, int replyCount, 
@@ -118,50 +251,10 @@ public class YoutubeIndexer {
     initialize();
     JsonArray topLevelComments = downloadComments(scope, scopeId);
     for (int i = 0; i < topLevelComments.size(); ++i) {
-      String commentId = topLevelComments.get(i).getAsJsonObject()
-                                         .get("id").getAsString();
-      String videoId = topLevelComments.get(i).getAsJsonObject()
-                                       .get("snippet").getAsJsonObject()
-                                       .get("videoId").getAsString();
-      String userName = topLevelComments.get(i).getAsJsonObject()
-                                        .get("snippet").getAsJsonObject()
-                                        .get("topLevelComment").getAsJsonObject()
-                                        .get("snippet").getAsJsonObject()
-                                        .get("authorDisplayName").getAsString();
-      String profilePicture = topLevelComments.get(i).getAsJsonObject()
-                                              .get("snippet").getAsJsonObject()
-                                              .get("topLevelComment").getAsJsonObject()
-                                              .get("snippet").getAsJsonObject()
-                                              .get("authorProfileImageUrl").getAsString();
-      String userId = topLevelComments.get(i).getAsJsonObject()
-                                      .get("snippet").getAsJsonObject()
-                                      .get("topLevelComment").getAsJsonObject()
-                                      .get("snippet").getAsJsonObject()
-                                      .get("authorChannelId").getAsJsonObject()
-                                      .get("value").getAsString();
-      String comment = topLevelComments.get(i).getAsJsonObject()
-                                       .get("snippet").getAsJsonObject()
-                                       .get("topLevelComment").getAsJsonObject()
-                                       .get("snippet").getAsJsonObject()
-                                       .get("textDisplay").getAsString();
-      String likeCount = topLevelComments.get(i).getAsJsonObject()
-                                         .get("snippet").getAsJsonObject()
-                                         .get("topLevelComment").getAsJsonObject()
-                                         .get("snippet").getAsJsonObject()
-                                         .get("likeCount").getAsString();
-      String publishTime = topLevelComments.get(i).getAsJsonObject()
-                                           .get("snippet").getAsJsonObject()
-                                           .get("topLevelComment").getAsJsonObject()
-                                           .get("snippet").getAsJsonObject()
-                                           .get("publishedAt").getAsString();
-      String updateTime = topLevelComments.get(i).getAsJsonObject()
-                                          .get("snippet").getAsJsonObject()
-                                          .get("topLevelComment").getAsJsonObject()
-                                          .get("snippet").getAsJsonObject()
-                                          .get("updatedAt").getAsString();
-      String replyCount = topLevelComments.get(i).getAsJsonObject()
-                                          .get("snippet").getAsJsonObject()
-                                          .get("totalReplyCount").getAsString();
+      Comment comment = Comment.parseTopLevelComment(topLevelComments.get(i).getAsJsonObject());
+      
+      
+      
     }
   }
   
