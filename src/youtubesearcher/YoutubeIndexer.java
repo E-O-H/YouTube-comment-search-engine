@@ -7,9 +7,11 @@ import java.nio.file.Paths;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
@@ -37,6 +39,7 @@ public class YoutubeIndexer {
    * Lucene indexer internal objects
    */
   private StandardAnalyzer analyzer; // analyzer for tokenizing text
+  private IndexWriterConfig config;  // config for IndexWriter
   private Directory index;           // the index
   
   enum Scope {
@@ -226,41 +229,49 @@ public class YoutubeIndexer {
     
   }
   
-  private static void addDoc(IndexWriter indexWriter, String commentId, String parentId, 
-                             String userId, String userName, String profilePicture, 
-                             String videoId, int likeCount, int replyCount, 
-                             String comment, String publishTime, String updateTime) throws IOException {
+  private static void addDoc(IndexWriter indexWriter, Comment comment) throws IOException {
     Document doc = new Document();
-    
-    
-    
-    
-    //doc.add(new TextField("title", title, Field.Store.YES));
-    //doc.add(new TextField("text", text, Field.Store.YES));
-    //doc.add(new StringField("path", path, Field.Store.YES));
-    
-    //Term key = new Term("id", id);
-    //indexWriter.addDocument(doc);
+    doc.add(new StringField("commentId", comment.getCommentId(), Field.Store.YES));
+    doc.add(new StringField("parentId", comment.getParentId(), Field.Store.YES));
+    doc.add(new StringField("userId", comment.getUserId(), Field.Store.YES));
+    doc.add(new StringField("videoId", comment.getVideoId(), Field.Store.YES));
+    doc.add(new TextField("userName", comment.getUserName(), Field.Store.YES));
+    doc.add(new TextField("commentText", comment.getCommentText(), Field.Store.YES));
+    doc.add(new StoredField("profilePicture", comment.getProfilePicture()));
+    doc.add(new StoredField("likeCount", comment.getLikeCount()));
+    doc.add(new StoredField("replyCount", comment.getReplyCount()));
+    // TODO add String publishTime, String updateTime
+
+    Term key = new Term("commentId", comment.getCommentId());
+    indexWriter.updateDocument(key, doc);        // Check for key first to avoid duplicate
   }
   
   private void initialize() {
     try {
       index = FSDirectory.open(indexDir);
     } catch (IOException e) {
-      System.err.println("Error opening index directory" + indexDir);
+      System.err.println("Error opening index directory " + indexDir);
       e.printStackTrace();
     }
     analyzer = new StandardAnalyzer();
+    config = new IndexWriterConfig(analyzer);
+    config.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND); // Append to existing index
   }
   
   public void buildCommentIndex(Scope scope, String scopeId) {
-    initialize();
     JsonArray topLevelComments = downloadComments(scope, scopeId);
-    for (int i = 0; i < topLevelComments.size() - 1; ++i) {
-      Comment comment = Comment.parseTopLevelComment(topLevelComments.get(i).getAsJsonObject());
-      
-      
-      
+    
+    initialize();
+    try (IndexWriter indexWriter = new IndexWriter(index, config)) {
+      for (int i = 0; i < topLevelComments.size() - 1; ++i) {
+        Comment comment = Comment.parseTopLevelComment(topLevelComments.get(i).getAsJsonObject());
+        addDoc(indexWriter, comment);
+        // TODO replies
+      }
+    } catch (IOException e) {
+      System.err.println("Error making index.");
+      e.printStackTrace();
+      return;
     }
   }
   
