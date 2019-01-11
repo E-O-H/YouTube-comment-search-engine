@@ -23,7 +23,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 /**
- * 
+ * Indexer for indexing Youtube comments
  * 
  * @author Chenyang Tang
  *
@@ -47,12 +47,14 @@ public class YoutubeIndexer {
   }
   
   /**
-   * Download the comments of a video
+   * Download one page of the top-level comments within a "scope" 
+   * (e.g. a "scope" can be a video or a channel).
    * 
+   * @param scope type of the scope
    * @param scopeId ID of scope (e.g. VideoId for VIDEO scope, ChannelId for CHANNEL scope)
    * @return JSON object of the comments
    */
-  public static JsonArray downloadComments(Scope scope, String scopeId) {
+  private static JsonArray downloadTopLevelCommentsPage(Scope scope, String scopeId) {
     final String SCOPE_FILTER;
     switch (scope) {
       case VIDEO:
@@ -90,6 +92,11 @@ public class YoutubeIndexer {
     return commentsArrayObj;
   }
   
+  private static JsonArray downloadReplyCommentsPage() {
+    // TODO
+    // https://www.googleapis.com/youtube/v3/comments?key=AIzaSyDF7H_kAHJsIhijiIKU9cxZuK7sforZnIc&textFormat=plainText&part=snippet&parentId=UgzV9t-ph7EGpULwDbV4AaABAg
+  }
+  
   static class Comment {
     private String commentId;
     private String parentId;
@@ -104,15 +111,15 @@ public class YoutubeIndexer {
     private int replyCount;
     
     private Comment() {
-      commentId = null;
-      parentId = null;
-      userId = null;
-      userName = null;
-      profilePicture = null;
-      videoId = null;
-      commentText = null;
-      publishTime = null;
-      updateTime = null;
+      commentId = "";
+      parentId = "";
+      userId = "";
+      userName = "";
+      profilePicture = "";
+      videoId = "";
+      commentText = "";
+      publishTime = "";
+      updateTime = "";
       likeCount = 0;
       replyCount = 0;
     }
@@ -162,10 +169,10 @@ public class YoutubeIndexer {
     }
     
     /**
-     * Factory method for making a top-level comment
+     * Factory method for making a top-level comment from parsing JSON
      * 
      * @param jsonObj JSON object for a top-level comment
-     * @return Comment object
+     * @return a Comment object
      */
     public static Comment parseTopLevelComment(JsonObject jsonObj) {
       Comment ret = new Comment();
@@ -215,10 +222,10 @@ public class YoutubeIndexer {
     }
     
     /**
-     * Factory method for making a reply comment
+     * Factory method for making a reply comment from parsing JSON
      * 
      * @param json JSON object for a reply comment
-     * @return Comment object
+     * @return a Comment object
      */
     public static Comment parseReplyComment(JsonObject json) {
       Comment ret = new Comment();
@@ -258,8 +265,19 @@ public class YoutubeIndexer {
     config.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND); // Append to existing index
   }
   
+  /**
+   * Build or update the index for all comments within a "scope" (a video or a channel).
+   * 
+   * The method first downloads all pages of top-level comments until there is no more pages, 
+   * then for each top-level comment, downloads all pages of its reply comments; meanwhile, 
+   * for each downloaded top-level comment and reply comment, parse their content as well as
+   * other attributes and add/update to the index.
+   * 
+   * @param scope type of the scope
+   * @param scopeId ID of scope (e.g. VideoId for VIDEO scope, ChannelId for CHANNEL scope)
+   */
   public void buildCommentIndex(Scope scope, String scopeId) {
-    JsonArray topLevelComments = downloadComments(scope, scopeId);
+    JsonArray topLevelComments = downloadTopLevelCommentsPage(scope, scopeId);
     
     initialize();
     try (IndexWriter indexWriter = new IndexWriter(index, config)) {
