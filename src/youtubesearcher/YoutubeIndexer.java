@@ -58,7 +58,7 @@ public class YoutubeIndexer {
     final String SCOPE_FILTER;
     switch (scope) {
       case VIDEO:
-        SCOPE_FILTER = "&VideoId=";
+        SCOPE_FILTER = "&videoId=";
         break;
       case CHANNEL:
         SCOPE_FILTER = "&allThreadsRelatedToChannelId=";
@@ -95,6 +95,8 @@ public class YoutubeIndexer {
   private static JsonArray downloadReplyCommentsPage() {
     // TODO
     // https://www.googleapis.com/youtube/v3/comments?key=AIzaSyDF7H_kAHJsIhijiIKU9cxZuK7sforZnIc&textFormat=plainText&part=snippet&parentId=UgzV9t-ph7EGpULwDbV4AaABAg
+    JsonArray commentsArrayObj = null;
+    return commentsArrayObj;
   }
   
   static class Comment {
@@ -295,7 +297,7 @@ public class YoutubeIndexer {
   
   public static void main(String[] args) {
     YoutubeIndexer youtubeIndexer = new YoutubeIndexer();
-    youtubeIndexer.buildCommentIndex(Scope.CHANNEL, "UC6ReSe57JF9ju3JPYRwxTUQ");
+    youtubeIndexer.buildCommentIndex(Scope.VIDEO, "fX_oywFtfIA");
   }
 
 }

@@ -80,6 +80,8 @@ public class YoutubeRetriever {
     // Build the Query object.
     Query query;
     try {
+      // Default search field is "commentText".
+      // Remember the analyzer must be the same one used when building the index.
       query = new QueryParser("commentText", analyzer).parse(queryString);
     } catch (ParseException e) {
       System.err.println("Error parsing the query string: \"" + queryString + "\"");
