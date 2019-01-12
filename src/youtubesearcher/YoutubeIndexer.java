@@ -1,5 +1,6 @@
 package youtubesearcher;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -17,6 +18,9 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -30,7 +34,51 @@ import com.google.gson.JsonParser;
  */
 public class YoutubeIndexer {
   
-  Path indexDir = Paths.get("index");
+  /*
+   * command-line arguments for the entry point
+   */
+  @Option(name = "-id", aliases = "-i", required = true, 
+      usage = "Id of the source scope (e.g. VideoId or ChannelId). Must match the scope option.")
+  private String id;
+  
+  @Option(name = "-path", aliases = "-p", 
+          usage = "Path to the directory to save index files (aka. output location).")
+  private File indexDir = new File("index");
+
+  @Option(name = "-video", aliases = "-v", forbids = {"-channel"}, 
+      usage = "Specify the source scope is a video. Exactly one scope option must be provided.")
+  private boolean isVideo = false;
+  
+  @Option(name = "-channel", aliases = "-c", forbids = {"-video"}, 
+      usage = "Specify the source scope is a channel. Exactly one scope option must be provided.")
+  private boolean isChannel = false;
+
+  @Option(name = "-help", aliases = "-h", help = true, 
+          usage = "Print help text.")
+  private boolean printHelp = false;
+  
+  @SuppressWarnings("deprecation")
+  private int parseArgs(String[] args) {
+    final CmdLineParser args4jCmdLineParser = new CmdLineParser(this);
+    try {
+      args4jCmdLineParser.parseArgument(args);
+      if (isVideo == false && isChannel == false) 
+        throw new CmdLineException("Must provide a source scope specifier option.");
+    } catch (final CmdLineException e) {
+      System.err.println(e.getMessage());
+      System.err.println("Usage:");
+      args4jCmdLineParser.printUsage(System.err);
+      return 2;
+    }
+    
+    if (printHelp) {
+      System.err.println("Usage:");
+      args4jCmdLineParser.printUsage(System.err);
+      return 1;
+    }
+    
+    return 0;
+  }
   
   private static final String URL_BASE = "https://www.googleapis.com/youtube/v3";
   private static final String API_KEY = "AIzaSyDF7H_kAHJsIhijiIKU9cxZuK7sforZnIc";
@@ -252,12 +300,12 @@ public class YoutubeIndexer {
     // TODO add String publishTime, String updateTime
 
     Term key = new Term("commentId", comment.getCommentId());
-    indexWriter.updateDocument(key, doc);        // Check for key first to avoid duplicate
+    indexWriter.updateDocument(key, doc); // This method checks for the key first to avoid duplicate
   }
   
   private void initialize() {
     try {
-      index = FSDirectory.open(indexDir);
+      index = FSDirectory.open(indexDir.toPath());
     } catch (IOException e) {
       System.err.println("Error opening index directory " + indexDir);
       e.printStackTrace();
@@ -297,7 +345,18 @@ public class YoutubeIndexer {
   
   public static void main(String[] args) {
     YoutubeIndexer youtubeIndexer = new YoutubeIndexer();
-    youtubeIndexer.buildCommentIndex(Scope.VIDEO, "fX_oywFtfIA");
+    youtubeIndexer.parseArgs(args);
+    Scope scope = null;
+    if (youtubeIndexer.isVideo) {
+      scope = Scope.VIDEO;
+    } else if (youtubeIndexer.isChannel) {
+      scope = Scope.CHANNEL;
+    } else {
+      // This part should be unreachable if the code is right.
+      System.err.println("Unknown scope.");
+      System.exit(-1);
+    }
+    youtubeIndexer.buildCommentIndex(scope, youtubeIndexer.id);
   }
 
 }
