@@ -53,6 +53,10 @@ public class YoutubeIndexer {
       usage = "Specify the source scope is a channel. Exactly one scope option must be provided.")
   private boolean isChannel = false;
 
+  @Option(name = "-api-key", aliases = "-k", 
+      usage = "Specify an API key to use. A built-in default one is used if not specified.")
+  private String apiKey;
+  
   @Option(name = "-help", aliases = "-h", help = true, 
           usage = "Print help text.")
   private boolean printHelp = false;
@@ -81,7 +85,7 @@ public class YoutubeIndexer {
   }
   
   private static final String URL_BASE = "https://www.googleapis.com/youtube/v3";
-  private static final String API_KEY = "AIzaSyDF7H_kAHJsIhijiIKU9cxZuK7sforZnIc";
+  private static String API_KEY = "AIzaSyDF7H_kAHJsIhijiIKU9cxZuK7sforZnIc";
   
   /*
    * Lucene indexer internal objects
@@ -95,30 +99,55 @@ public class YoutubeIndexer {
   }
   
   /**
+   * This class stores all needed information from one downloaded page
+   */
+  private static class CommentsPage {
+    private JsonArray comments;     // the JSON object containing all comments on the page
+    private String nextPageToken;   // token for retrieving the next page
+    
+    public CommentsPage(JsonArray comments, String nextPageToken) {
+      this.comments = comments;
+      this.nextPageToken = nextPageToken;
+    }
+
+    public final JsonArray getComments() {
+      return comments;
+    }
+
+    public final String getNextPageToken() {
+      return nextPageToken;
+    }
+  }
+  
+  /**
    * Download one page of the top-level comments within a "scope" 
    * (e.g. a "scope" can be a video or a channel).
    * 
    * @param scope type of the scope
    * @param scopeId ID of scope (e.g. VideoId for VIDEO scope, ChannelId for CHANNEL scope)
-   * @return JSON object of the comments
+   * @param pageToken pageToken of the page (provide null for the first page)
+   * @return an object containing information of all comments on the page and a nextPageToken
    */
-  private static JsonArray downloadTopLevelCommentsPage(Scope scope, String scopeId) {
+  private static CommentsPage downloadTopLevelCommentsPage(Scope scope, String scopeId, 
+                                                           String pageToken) {
     final String SCOPE_FILTER;
     switch (scope) {
       case VIDEO:
-        SCOPE_FILTER = "&videoId=";
+        SCOPE_FILTER = "&videoId=" + scopeId;
         break;
       case CHANNEL:
-        SCOPE_FILTER = "&allThreadsRelatedToChannelId=";
+        SCOPE_FILTER = "&allThreadsRelatedToChannelId=" + scopeId;
         break;
       default:
         System.err.println("Invalid Scope.");
         return null;
     }
     
+    final String PAGE_TOKEN = pageToken == null ? "" : "&pageToken=" + pageToken;
+    
     String urlStr = URL_BASE + "/commentThreads" + "?key=" + API_KEY 
-                    + "&textFormat=plainText&part=snippet" + SCOPE_FILTER
-                    + scopeId + "&maxResults=100";
+                    + "&textFormat=plainText&part=snippet" + "&maxResults=100"
+                    + SCOPE_FILTER + PAGE_TOKEN;
     
     Connection.Response response;
     try {
@@ -137,7 +166,15 @@ public class YoutubeIndexer {
     JsonParser parser = new JsonParser();
     JsonObject rootObj = parser.parse(response.body()).getAsJsonObject();
     JsonArray commentsArrayObj = rootObj.getAsJsonArray("items");
-    return commentsArrayObj;
+    
+    String nextPageToken = null;
+    try {
+      nextPageToken = rootObj.get("nextPageToken").getAsString();
+    } catch (NullPointerException e) {
+      // Do nothing
+    }
+    
+    return new CommentsPage(commentsArrayObj, nextPageToken);
   }
   
   private static JsonArray downloadReplyCommentsPage() {
@@ -327,15 +364,22 @@ public class YoutubeIndexer {
    * @param scopeId ID of scope (e.g. VideoId for VIDEO scope, ChannelId for CHANNEL scope)
    */
   public void buildCommentIndex(Scope scope, String scopeId) {
-    JsonArray topLevelComments = downloadTopLevelCommentsPage(scope, scopeId);
-    
     initialize();
     try (IndexWriter indexWriter = new IndexWriter(index, config)) {
-      for (int i = 0; i < topLevelComments.size() - 1; ++i) {
-        Comment comment = Comment.parseTopLevelComment(topLevelComments.get(i).getAsJsonObject());
-        addDoc(indexWriter, comment);
-        // TODO replies
-      }
+      String pageToken = null;
+      do {
+        // Loop pages
+        CommentsPage commentsPage = downloadTopLevelCommentsPage(scope, scopeId, pageToken);
+        JsonArray topLevelComments = commentsPage.getComments();
+        for (int i = 0; i < topLevelComments.size() - 1; ++i) {
+          // Loop comment threads (top-level comments)
+          Comment comment = Comment.parseTopLevelComment(topLevelComments.get(i).getAsJsonObject());
+          addDoc(indexWriter, comment);
+          // TODO replies
+        }
+        pageToken = commentsPage.getNextPageToken();
+      } while (pageToken != null);
+      
     } catch (IOException e) {
       System.err.println("Error making index.");
       e.printStackTrace();
@@ -346,6 +390,7 @@ public class YoutubeIndexer {
   public static void main(String[] args) {
     YoutubeIndexer youtubeIndexer = new YoutubeIndexer();
     youtubeIndexer.parseArgs(args);
+    if (youtubeIndexer.apiKey != null) API_KEY = youtubeIndexer.apiKey;
     Scope scope = null;
     if (youtubeIndexer.isVideo) {
       scope = Scope.VIDEO;
