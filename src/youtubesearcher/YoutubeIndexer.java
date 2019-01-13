@@ -428,7 +428,7 @@ public class YoutubeIndexer {
       String topLevelPageToken = null;
       do {
         // Loop top-level pages
-        System.out.print("Indexing page " + pageNum + "...");
+        System.out.print("Indexing top-level page " + pageNum + "...");
         
         CommentsPage topLevelPage = downloadTopLevelCommentsPage(scope, scopeId, topLevelPageToken);
         JsonArray topLevelComments = topLevelPage.getComments();
@@ -439,21 +439,23 @@ public class YoutubeIndexer {
           Comment comment = Comment.parseTopLevelComment(topLevelComments.get(i).getAsJsonObject());
           addDoc(indexWriter, comment);
           String parentId = comment.getCommentId();
-          String videoId = comment.getVideoId();
           
-          String replyPageToken = null;
-          do {
-            // Loop reply pages
-            CommentsPage replyPage = downloadReplyCommentsPage(parentId, replyPageToken);
-            JsonArray replyComments = replyPage.getComments();
-            for (int j = 0; j < replyComments.size() - 1; ++j) {
-              // Loop replies
-              comment = Comment.parseReplyComment(replyComments.get(j).getAsJsonObject());
-              comment.setVideoId(videoId);
-              addDoc(indexWriter, comment);
-            } // END FOR (loop replies)
-            replyPageToken = replyPage.getNextPageToken();
-          } while (replyPageToken != null);
+          if (comment.getReplyCount() > 0) {
+            String videoId = comment.getVideoId();
+            String replyPageToken = null;
+            do {
+              // Loop reply pages
+              CommentsPage replyPage = downloadReplyCommentsPage(parentId, replyPageToken);
+              JsonArray replyComments = replyPage.getComments();
+              for (int j = 0; j < replyComments.size() - 1; ++j) {
+                // Loop replies
+                comment = Comment.parseReplyComment(replyComments.get(j).getAsJsonObject());
+                comment.setVideoId(videoId);
+                addDoc(indexWriter, comment);
+              } // END FOR (loop replies)
+              replyPageToken = replyPage.getNextPageToken();
+            } while (replyPageToken != null);
+          }
           System.out.print("\b\b\b");
         } // END FOR (loop comment threads)
         topLevelPageToken = topLevelPage.getNextPageToken();

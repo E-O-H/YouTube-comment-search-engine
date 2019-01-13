@@ -3,6 +3,7 @@ package youtubesearcher;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
@@ -13,6 +14,12 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.highlight.Formatter;
+import org.apache.lucene.search.highlight.Highlighter;
+import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
+import org.apache.lucene.search.highlight.QueryScorer;
+import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
+import org.apache.lucene.search.highlight.SimpleSpanFragmenter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.kohsuke.args4j.CmdLineException;
@@ -93,7 +100,7 @@ public class YoutubeRetriever {
       searcher = new IndexSearcher(reader);
       docs = searcher.search(query, hitsPerPage);
       
-      outputResults();
+      outputResults(query);
     } catch (IOException e) {
       System.err.println("Error opening index.");
       e.printStackTrace();
@@ -105,9 +112,11 @@ public class YoutubeRetriever {
   
   /**
    * Output results as an HTML snippet
+   * 
+   * @param query Query object (used for highlighting result)
    * @throws IOException 
    */
-  private void outputResults() throws IOException {
+  private void outputResults(Query query) throws IOException {
     if (searcher.getIndexReader().maxDoc() == 0) {
       System.err.println("No document in the index!");
       return;
@@ -121,15 +130,34 @@ public class YoutubeRetriever {
     for(int i = 0; i < hits.length; ++i) {
         int docId = hits[i].doc;
         Document doc = searcher.doc(docId);
+        
+        String highlightedText;
+        try {
+          highlightedText = getHighlightedField(query, analyzer, 
+                                                "commentText", doc.get("commentText"));
+        } catch (InvalidTokenOffsetsException e) {
+          highlightedText = doc.get("commentText");
+        }
+        
         System.out.println("<p><b><i>" 
                            + (i + 1) 
                            + "</i>. " 
                            + doc.get("userName") 
                            + "</b><br><span style='margin-left:3em'>" 
-                           + doc.get("commentText") + "</span></p>");
+                           + highlightedText + "</span></p>");
     }
   }
   
+  private static String getHighlightedField(Query query, Analyzer analyzer, 
+                                     String fieldName, String fieldValue) 
+                                         throws IOException, InvalidTokenOffsetsException {
+    Formatter formatter = new SimpleHTMLFormatter("<b>", "</b>");
+    QueryScorer queryScorer = new QueryScorer(query);
+    Highlighter highlighter = new Highlighter(formatter, queryScorer);
+    highlighter.setTextFragmenter(new SimpleSpanFragmenter(queryScorer, Integer.MAX_VALUE));
+    highlighter.setMaxDocCharsToAnalyze(Integer.MAX_VALUE);
+    return highlighter.getBestFragment(analyzer, fieldName, fieldValue);
+}
   
   private int parseArgs(String[] args) {
     final CmdLineParser args4jCmdLineParser = new CmdLineParser(this);

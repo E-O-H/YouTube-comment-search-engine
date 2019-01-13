@@ -7,5 +7,7 @@
 	<classpathentry kind="lib" path="D:/myJavaWorkspace/lucene-6.6.0/queryparser/lucene-queryparser-6.6.0.jar"/>
 	<classpathentry kind="lib" path="D:/myJavaWorkspace/jsoup-1.11.3/jsoup-1.11.3.jar"/>
 	<classpathentry kind="lib" path="D:/myJavaWorkspace/gson-2.6.2.jar"/>
+	<classpathentry kind="lib" path="D:/myJavaWorkspace/lucene-6.6.0/highlighter/lucene-highlighter-6.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/myJavaWorkspace/lucene-6.6.0/memory/lucene-memory-6.6.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
