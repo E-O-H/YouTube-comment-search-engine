@@ -432,10 +432,10 @@ public class YoutubeIndexer {
         
         CommentsPage topLevelPage = downloadTopLevelCommentsPage(scope, scopeId, topLevelPageToken);
         JsonArray topLevelComments = topLevelPage.getComments();
-        for (int i = 0; i < topLevelComments.size() - 1; ++i) {
+        for (int i = 0; i < topLevelComments.size(); ++i) {
           // Loop comment threads (top-level comments)
           
-          System.out.printf("%2d%%", (int)((float) i / (topLevelComments.size() - 1) * 100));
+          System.out.printf("%2d%%", (int)((float) i / (topLevelComments.size()) * 100));
           Comment comment = Comment.parseTopLevelComment(topLevelComments.get(i).getAsJsonObject());
           addDoc(indexWriter, comment);
           String parentId = comment.getCommentId();
@@ -447,7 +447,7 @@ public class YoutubeIndexer {
               // Loop reply pages
               CommentsPage replyPage = downloadReplyCommentsPage(parentId, replyPageToken);
               JsonArray replyComments = replyPage.getComments();
-              for (int j = 0; j < replyComments.size() - 1; ++j) {
+              for (int j = 0; j < replyComments.size(); ++j) {
                 // Loop replies
                 comment = Comment.parseReplyComment(replyComments.get(j).getAsJsonObject());
                 comment.setVideoId(videoId);
