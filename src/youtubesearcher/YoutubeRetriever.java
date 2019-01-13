@@ -40,7 +40,7 @@ public class YoutubeRetriever {
   
   @Option(name = "-max", aliases = "-m", required = false, 
       usage = "Maximum number of search results to output.")
-  private int hitsPerPage = 50; 
+  private int hitsPerPage = 20; 
 
   @Option(name = "-help", aliases = "-h", required = false, 
           usage = "Print help text.")

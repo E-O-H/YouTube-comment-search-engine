@@ -126,7 +126,7 @@ public class YoutubeIndexer {
    * @param scope type of the scope
    * @param scopeId ID of scope (e.g. VideoId for VIDEO scope, ChannelId for CHANNEL scope)
    * @param pageToken pageToken of the page (provide null for the first page)
-   * @return an object containing information of all comments on the page and a nextPageToken
+   * @return an object containing information of all comments in the page and a nextPageToken
    */
   private static CommentsPage downloadTopLevelCommentsPage(Scope scope, String scopeId, 
                                                            String pageToken) {
@@ -177,11 +177,47 @@ public class YoutubeIndexer {
     return new CommentsPage(commentsArrayObj, nextPageToken);
   }
   
-  private static JsonArray downloadReplyCommentsPage() {
-    // TODO
-    // https://www.googleapis.com/youtube/v3/comments?key=AIzaSyDF7H_kAHJsIhijiIKU9cxZuK7sforZnIc&textFormat=plainText&part=snippet&parentId=UgzV9t-ph7EGpULwDbV4AaABAg
-    JsonArray commentsArrayObj = null;
-    return commentsArrayObj;
+  /**
+   * Download one page of reply comments (i.e. replies in a comment thread).
+   * 
+   * @param parentId The ID of the top-level comment (a.k.a. the thread ID)
+   * @param pageToken pageToken of the page (provide null for the first page)
+   * @return an object containing information of all comments in the page and a nextPageToken
+   */
+  private static CommentsPage downloadReplyCommentsPage(String parentId, String pageToken) {
+    final String PAGE_TOKEN = pageToken == null ? "" : "&pageToken=" + pageToken;
+    
+    String urlStr = URL_BASE + "/comments" + "?key=" + API_KEY 
+                    + "&textFormat=plainText&part=snippet" + "&maxResults=100"
+                    + "&parentId=" + parentId 
+                    + PAGE_TOKEN;
+    
+    Connection.Response response;
+    try {
+       response = Jsoup.connect(urlStr)
+                       .method(Connection.Method.GET)
+                       .ignoreContentType(true)
+                       .maxBodySize(Integer.MAX_VALUE)
+                       .execute();
+    } catch (IOException e) {
+      System.err.println(
+          "Network error when retrieving the page: " + urlStr + ".");
+      System.err.println(e.getMessage());
+      return null;
+    }
+    
+    JsonParser parser = new JsonParser();
+    JsonObject rootObj = parser.parse(response.body()).getAsJsonObject();
+    JsonArray commentsArrayObj = rootObj.getAsJsonArray("items");
+    
+    String nextPageToken = null;
+    try {
+      nextPageToken = rootObj.get("nextPageToken").getAsString();
+    } catch (NullPointerException e) {
+      // Do nothing
+    }
+    
+    return new CommentsPage(commentsArrayObj, nextPageToken);
   }
   
   static class Comment {
@@ -209,6 +245,10 @@ public class YoutubeIndexer {
       updateTime = "";
       likeCount = 0;
       replyCount = 0;
+    }
+
+    public void setVideoId(String videoId) {
+      this.videoId = videoId;
     }
 
     public final String getCommentId() {
@@ -311,12 +351,30 @@ public class YoutubeIndexer {
     /**
      * Factory method for making a reply comment from parsing JSON
      * 
-     * @param json JSON object for a reply comment
+     * @param jsonObj JSON object for a reply comment
      * @return a Comment object
      */
-    public static Comment parseReplyComment(JsonObject json) {
+    public static Comment parseReplyComment(JsonObject jsonObj) {
       Comment ret = new Comment();
       
+      ret.commentId = jsonObj.get("id").getAsString();
+      ret.userName = jsonObj.get("snippet").getAsJsonObject()
+                            .get("authorDisplayName").getAsString();
+      ret.profilePicture = jsonObj.get("snippet").getAsJsonObject()
+                                  .get("authorProfileImageUrl").getAsString();
+      ret.userId = jsonObj.get("snippet").getAsJsonObject()
+                          .get("authorChannelId").getAsJsonObject()
+                          .get("value").getAsString();
+      ret.commentText = jsonObj.get("snippet").getAsJsonObject()
+                               .get("textDisplay").getAsString();
+      ret.publishTime = jsonObj.get("snippet").getAsJsonObject()
+                               .get("publishedAt").getAsString();
+      ret.updateTime = jsonObj.get("snippet").getAsJsonObject()
+                              .get("updatedAt").getAsString();
+      ret.likeCount = jsonObj.get("snippet").getAsJsonObject()
+                             .get("likeCount").getAsInt();
+      ret.parentId = jsonObj.get("snippet").getAsJsonObject()
+                            .get("parentId").getAsString();
       
       return ret;
     }
@@ -366,19 +424,42 @@ public class YoutubeIndexer {
   public void buildCommentIndex(Scope scope, String scopeId) {
     initialize();
     try (IndexWriter indexWriter = new IndexWriter(index, config)) {
-      String pageToken = null;
+      int pageNum = 1;
+      String topLevelPageToken = null;
       do {
-        // Loop pages
-        CommentsPage commentsPage = downloadTopLevelCommentsPage(scope, scopeId, pageToken);
-        JsonArray topLevelComments = commentsPage.getComments();
+        // Loop top-level pages
+        System.out.print("Indexing page " + pageNum + "...");
+        
+        CommentsPage topLevelPage = downloadTopLevelCommentsPage(scope, scopeId, topLevelPageToken);
+        JsonArray topLevelComments = topLevelPage.getComments();
         for (int i = 0; i < topLevelComments.size() - 1; ++i) {
           // Loop comment threads (top-level comments)
+          
+          System.out.printf("%2d%%", (int)((float) i / (topLevelComments.size() - 1) * 100));
           Comment comment = Comment.parseTopLevelComment(topLevelComments.get(i).getAsJsonObject());
           addDoc(indexWriter, comment);
-          // TODO replies
-        }
-        pageToken = commentsPage.getNextPageToken();
-      } while (pageToken != null);
+          String parentId = comment.getCommentId();
+          String videoId = comment.getVideoId();
+          
+          String replyPageToken = null;
+          do {
+            // Loop reply pages
+            CommentsPage replyPage = downloadReplyCommentsPage(parentId, replyPageToken);
+            JsonArray replyComments = replyPage.getComments();
+            for (int j = 0; j < replyComments.size() - 1; ++j) {
+              // Loop replies
+              comment = Comment.parseReplyComment(replyComments.get(j).getAsJsonObject());
+              comment.setVideoId(videoId);
+              addDoc(indexWriter, comment);
+            } // END FOR (loop replies)
+            replyPageToken = replyPage.getNextPageToken();
+          } while (replyPageToken != null);
+          System.out.print("\b\b\b");
+        } // END FOR (loop comment threads)
+        topLevelPageToken = topLevelPage.getNextPageToken();
+        ++pageNum;
+        System.out.println("DONE");
+      } while (topLevelPageToken != null);
       
     } catch (IOException e) {
       System.err.println("Error making index.");
