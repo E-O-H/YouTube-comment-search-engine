@@ -69,17 +69,10 @@ public class YoutubeRetriever {
   @Option(name = "-max", aliases = "-m",
       usage = "Maximum number of search results to output.")
   private int hitsPerPage = 20; 
-
-  @Option(name = "-api-key", aliases = "-k", 
-      usage = "Specify an API key to use. A built-in default one is used if not specified.")
-  private String apiKey;
   
   @Option(name = "-help", aliases = "-h", help = true,
           usage = "Print help text.")
   private boolean printHelp = false;
-  
-  private static final String URL_BASE = "https://www.googleapis.com/youtube/v3";
-  private static String API_KEY = "AIzaSyDF7H_kAHJsIhijiIKU9cxZuK7sforZnIc";
   
   /*
    * Lucene retriever internal objects
@@ -207,132 +200,18 @@ public class YoutubeRetriever {
           highlightedText = doc.get("commentText");
         }
         
-        Video video = getVideoInfo(doc.get("videoId"));
-        
         System.out.println("<p><b><i>" 
                            + (i + 1) 
                            + "</i>. " 
                            + doc.get("userName") 
-                           + " in video: "
-                           + video.title
-                           + "</b><br><span style='margin-left:3em'>" 
+                           + " on video: "
+                           + doc.get("videoTitle")
+                           + "</b>"
+                           + " from channel: "
+                           + doc.get("channelTitle")
+                           + "<br><span style='margin-left:3em'>" 
                            + highlightedText
                            + "</span></p>");
-    }
-  }
-  
-  /**
-   * Retrieve the information of a video from youtube.com. 
-   * 
-   * @param videoId videoId.
-   * @return Video object containing video information
-   */
-  Video getVideoInfo(String videoId) {
-    String urlStr = URL_BASE 
-                    + "/videos" 
-                    + "?key=" + API_KEY
-                    + "&part=snippet" 
-                    + "&fields=items(id%2Csnippet)"
-                    + "&id=" + videoId;
-    
-    Connection.Response response;
-    try {
-       response = Jsoup.connect(urlStr)
-                       .method(Connection.Method.GET)
-                       .ignoreContentType(true)
-                       .maxBodySize(Integer.MAX_VALUE)
-                       .execute();
-    } catch (IOException e) {
-      System.err.println(e);
-      return new Video();
-    }
-    
-    JsonParser parser = new JsonParser();
-    JsonObject rootObj = parser.parse(response.body()).getAsJsonObject();
-    
-    String title = null;
-    String thumbnail = null;
-    String channelId = null;
-    String channelTitle = null;
-    try {
-      JsonObject videoSnippetJson = rootObj.getAsJsonArray("items")
-                                           .get(0)
-                                           .getAsJsonObject()
-                                           .getAsJsonObject("snippet");
-      title = videoSnippetJson.get("title")
-                              .getAsString();
-      thumbnail = videoSnippetJson.getAsJsonObject("thumbnails")
-                                  .getAsJsonObject("default")
-                                  .get("url")
-                                  .getAsString();
-      channelId = videoSnippetJson.get("channelId")
-                                  .getAsString();
-      channelTitle = videoSnippetJson.get("channelTitle")
-                                     .getAsString();
-    } catch (NullPointerException e) {
-      System.err.println(e);
-      return new Video();
-    }
-    
-    return new Video(videoId, title, thumbnail, channelId, channelTitle);
-  }
-  
-  static class Video {
-    private String id;
-    private String title;
-    private String thumbnail;
-    private String channelId;
-    private String channelTitle;
-    
-    public Video() {
-      this.id = null;
-      this.title = null;
-      this.thumbnail = null;
-      this.channelId = null;
-      this.channelTitle = null;
-    }
-    
-    public Video(String id, String title, String thumbnail, String channelId, String channelTitle) {
-      this.id = id;
-      this.title = title;
-      this.thumbnail = thumbnail;
-      this.channelId = channelId;
-      this.channelTitle = channelTitle;
-    }
-    
-    /**
-     * @return the id
-     */
-    public String getId() {
-      return id;
-    }
-    
-    /**
-     * @return the title
-     */
-    public String getTitle() {
-      return title;
-    }
-    
-    /**
-     * @return the thumbnail
-     */
-    public String getThumbnail() {
-      return thumbnail;
-    }
-
-    /**
-     * @return the channelId
-     */
-    public String getChannelId() {
-      return channelId;
-    }
-
-    /**
-     * @return the channelTitle
-     */
-    public String getChannelTitle() {
-      return channelTitle;
     }
   }
   
@@ -389,7 +268,6 @@ public class YoutubeRetriever {
    */
   public static void main(String[] args) {
     final YoutubeRetriever youtubeRetriever = new YoutubeRetriever();
-    if (youtubeRetriever.apiKey != null) API_KEY = youtubeRetriever.apiKey;
     int status;
     status = youtubeRetriever.parseArgs(args);
     if (status != 0) System.exit(status);

@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -25,6 +27,8 @@ import org.kohsuke.args4j.Option;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import youtubesearcher.YoutubeRetriever.Video;
 
 /**
  * Indexer for indexing Youtube comments
@@ -380,8 +384,172 @@ public class YoutubeIndexer {
     }
     
   }
+
+  /**
+   * Retrieve the information of a video from youtube.com. 
+   * 
+   * @param videoId videoId.
+   * @return JSON object containing video information
+   */
+  private static JsonObject downloadVideoInfo(String videoId) {
+    String urlStr = URL_BASE 
+                    + "/videos" 
+                    + "?key=" + API_KEY
+                    + "&part=snippet" 
+                    + "&fields=items(id%2Csnippet)"
+                    + "&id=" + videoId;
+    
+    Connection.Response response;
+    try {
+       response = Jsoup.connect(urlStr)
+                       .method(Connection.Method.GET)
+                       .ignoreContentType(true)
+                       .maxBodySize(Integer.MAX_VALUE)
+                       .execute();
+    } catch (IOException e) {
+      System.err.println(e);
+      return null;
+    }
+    
+    try {
+      JsonParser parser = new JsonParser();
+      JsonObject rootObj = parser.parse(response.body()).getAsJsonObject();
+      JsonObject videoJson = rootObj.getAsJsonArray("items")
+                                           .get(0)
+                                           .getAsJsonObject();
+      return videoJson;
+    } catch (NullPointerException e) {
+      System.err.println(e);
+      return null;
+    }
+  }
   
-  private static void addDoc(IndexWriter indexWriter, Comment comment) throws IOException {
+  static class Video {
+    private String id;
+    private String title;
+    private String thumbnail;
+    private String channelId;
+    private String channelTitle;
+    
+    private Video() {
+      this.id = "";
+      this.title = "";
+      this.thumbnail = "";
+      this.channelId = "";
+      this.channelTitle = "";
+    }
+    
+    private Video(String id, String title, String thumbnail, String channelId, String channelTitle) {
+      this.id = id;
+      this.title = title;
+      this.thumbnail = thumbnail;
+      this.channelId = channelId;
+      this.channelTitle = channelTitle;
+    }
+    
+    /**
+     * @return the id
+     */
+    public String getId() {
+      return id;
+    }
+    
+    /**
+     * @return the title
+     */
+    public String getTitle() {
+      return title;
+    }
+    
+    /**
+     * @return the thumbnail
+     */
+    public String getThumbnail() {
+      return thumbnail;
+    }
+
+    /**
+     * @return the channelId
+     */
+    public String getChannelId() {
+      return channelId;
+    }
+
+    /**
+     * @return the channelTitle
+     */
+    public String getChannelTitle() {
+      return channelTitle;
+    }
+    
+    /**
+     * Factory method for making a Video object from parsing JSON
+     * 
+     * @param jsonObj JSON object for a video
+     * @return a Video object
+     */
+    public static Video parseVideoInfo(JsonObject videoJson) {
+      try {
+        String videoId = videoJson.get("id")
+                           .getAsString();
+        String title = videoJson.getAsJsonObject("snippet")
+                         .get("title")
+                         .getAsString();
+        String thumbnail = videoJson.getAsJsonObject("snippet")
+                             .getAsJsonObject("thumbnails")
+                             .getAsJsonObject("default")
+                             .get("url")
+                             .getAsString();
+        String channelId = videoJson.getAsJsonObject("snippet")
+                             .get("channelId")
+                             .getAsString();
+        String channelTitle = videoJson.getAsJsonObject("snippet")
+                                .get("channelTitle")
+                                .getAsString();
+        
+        return new Video(videoId, title, thumbnail, channelId, channelTitle);
+      } catch (NullPointerException e) {
+        System.err.println(e);
+        return new Video();
+      }
+    }
+  }
+  
+  /**
+   * Retrieve information about a video from a videoId. 
+   * 
+   * This method will check against a cache first. If the videoId is not in the cache, it will
+   * attempt to download the information from Youtube. 
+   * 
+   * Note the method will return an Video object with all empty string if the videoId is null or 
+   * empty. This CAN happen normally when a comment is associated with a channel instead of a video.
+   * (Yes, there are comments on channels on Youtube; you can see them under the 
+   * "DISCUSSION" tab if a channel allows it; most big channels don't allow though.)
+   * 
+   * @param videoId Video ID.
+   * @param videoCache Cache of video information.
+   * @return Video object containing information of the video.
+   */
+  private static Video getVideoInfo(String videoId, Map<String, Video> videoCache) {
+    // Be careful videoId can be null or empty! 
+    if (videoId == null || videoId.isEmpty()) {
+      return new Video();
+    }
+    
+    // Cache hit
+    if (videoCache.containsKey(videoId)) {
+      return videoCache.get(videoId);
+    }
+    
+    // Not in cache; has to download over the internet
+    JsonObject videoJson = downloadVideoInfo(videoId);
+    Video videoInfo = Video.parseVideoInfo(videoJson);
+    videoCache.put(videoId, videoInfo);
+    return videoInfo;
+  }
+  
+  private static void addDoc(IndexWriter indexWriter, Comment comment, Video videoInfo)
+                                                                         throws IOException {
     Document doc = new Document();
     doc.add(new StringField("commentId", comment.getCommentId(), Field.Store.YES));
     doc.add(new StringField("parentId", comment.getParentId(), Field.Store.YES));
@@ -393,6 +561,11 @@ public class YoutubeIndexer {
     doc.add(new StoredField("likeCount", comment.getLikeCount()));
     doc.add(new StoredField("replyCount", comment.getReplyCount()));
     // TODO add String publishTime, String updateTime
+    doc.add(new TextField("videoTitle", videoInfo.getTitle(), Field.Store.YES));
+    doc.add(new StoredField("videoThumbnail", videoInfo.getThumbnail()));
+    doc.add(new StringField("channelId", videoInfo.getChannelId(), Field.Store.YES));
+    doc.add(new TextField("channelTitle", videoInfo.getChannelTitle(), Field.Store.YES));
+    
 
     Term key = new Term("commentId", comment.getCommentId());
     indexWriter.updateDocument(key, doc); // This method checks for the key first to avoid duplicate
@@ -423,6 +596,11 @@ public class YoutubeIndexer {
    */
   public void buildCommentIndex(Scope scope, String scopeId) {
     initialize();
+    
+    // Make a hash map cache for video information
+    Map<String, Video> videoCache = new HashMap<String, Video>();
+    
+    // Main indexer loop
     try (IndexWriter indexWriter = new IndexWriter(index, config)) {
       int pageNum = 1;
       String topLevelPageToken = null;
@@ -437,11 +615,12 @@ public class YoutubeIndexer {
           
           System.out.printf("%2d%%", (int)((float) i / (topLevelComments.size()) * 100));
           Comment comment = Comment.parseTopLevelComment(topLevelComments.get(i).getAsJsonObject());
-          addDoc(indexWriter, comment);
+          String videoId = comment.getVideoId();
+          Video videoInfo = getVideoInfo(videoId, videoCache); 
+          addDoc(indexWriter, comment, videoInfo);
           String parentId = comment.getCommentId();
           
           if (comment.getReplyCount() > 0) {
-            String videoId = comment.getVideoId();
             String replyPageToken = null;
             do {
               // Loop reply pages
@@ -451,7 +630,7 @@ public class YoutubeIndexer {
                 // Loop replies
                 comment = Comment.parseReplyComment(replyComments.get(j).getAsJsonObject());
                 comment.setVideoId(videoId);
-                addDoc(indexWriter, comment);
+                addDoc(indexWriter, comment, videoInfo);
               } // END FOR (loop replies)
               replyPageToken = replyPage.getNextPageToken();
             } while (replyPageToken != null);
