@@ -10,6 +10,8 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.BooleanClause.Occur;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -41,15 +43,28 @@ public class YoutubeRetriever {
           usage = "Path to the directory of the index files to be searched. Required option.")
   private File indexDir;
 
-  @Option(name = "-query", aliases = "-q", required = true, 
-          usage = "The search query terms string. Required option.")
-  private String queryString;
+  @Option(name = "-query", aliases = "-q", 
+          usage = "The search query terms string. "
+                  + "Can be ommited, e.g. to search for all comments from a user.")
+  private String commentQueryString;
   
-  @Option(name = "-max", aliases = "-m", required = false, 
+  @Option(name = "-username", aliases = "-un",
+      usage = "Usernames to filter the search result. Double quote a username for exact match.")
+  private String userNameString;
+  
+  @Option(name = "-userId", aliases = "-ui",
+      usage = "A list of user IDs to filter the search result. Separated by space.")
+  private String userIdString;
+  
+  @Option(name = "-videoId", aliases = "-vi",
+      usage = "A list of video IDs to filter the search result. Separated by space.")
+  private String videoIdString;
+  
+  @Option(name = "-max", aliases = "-m",
       usage = "Maximum number of search results to output.")
   private int hitsPerPage = 20; 
 
-  @Option(name = "-help", aliases = "-h", required = false, 
+  @Option(name = "-help", aliases = "-h", help = true,
           usage = "Print help text.")
   private boolean printHelp = false;
   
@@ -60,7 +75,8 @@ public class YoutubeRetriever {
   private Directory index;           // the index
   private IndexReader reader;        // reader object
   private IndexSearcher searcher;    // searcher object
-  private TopDocs docs;              // top docs
+  private BooleanQuery finalQuery;   // constructed query object
+  private TopDocs docs;              // search result
   
   private void initialize() {
     try {
@@ -77,19 +93,52 @@ public class YoutubeRetriever {
   }
   
   /**
+   * Build the final Query object.
+   * 
+   * @return The final combined Query object (a BooleanQuery object).
+   * @throws ParseException Exception in parsing query.
+   */
+  private BooleanQuery buildQuery() throws ParseException {
+    BooleanQuery.Builder booleanQueryBuilder = new BooleanQuery.Builder();
+    
+    // Comment query
+    if (commentQueryString != null) {
+      Query commentQuery = new QueryParser("commentText", analyzer).parse(commentQueryString);
+      booleanQueryBuilder.add(commentQuery, Occur.MUST);
+    }
+    
+    // Username query
+    if (userNameString != null) {
+      Query userNameQuery = new QueryParser("userName", analyzer).parse(userNameString);
+      booleanQueryBuilder.add(userNameQuery, Occur.MUST);
+    }
+    // UserId query
+    if (userIdString != null) {
+      Query userIdQuery = new QueryParser("userId", analyzer).parse(userIdString);
+      booleanQueryBuilder.add(userIdQuery, Occur.MUST);
+    }
+    // VideoId query
+    if (videoIdString != null) {
+      Query videoIdQuery = new QueryParser("videoId", analyzer).parse(videoIdString);
+      booleanQueryBuilder.add(videoIdQuery, Occur.MUST);
+    }
+    
+    return booleanQueryBuilder.build();
+  }
+  
+  /**
    * Search the query string.
+   * 
+   * @return status code (0 for success).
    */
   private int search() {
     initialize();
     
     // Build the Query object.
-    Query query;
     try {
-      // Default search field is "commentText".
-      // Remember the analyzer must be the same one used when building the index.
-      query = new QueryParser("commentText", analyzer).parse(queryString);
+      finalQuery = buildQuery();
     } catch (ParseException e) {
-      System.err.println("Error parsing the query string: \"" + queryString + "\"");
+      System.err.println("Error parsing the query string: \"" + commentQueryString + "\"");
       e.printStackTrace();
       return 1;
     }
@@ -98,9 +147,9 @@ public class YoutubeRetriever {
     try {
       reader = DirectoryReader.open(index);
       searcher = new IndexSearcher(reader);
-      docs = searcher.search(query, hitsPerPage);
+      docs = searcher.search(finalQuery, hitsPerPage);
       
-      outputResults(query);
+      outputResults(finalQuery);
     } catch (IOException e) {
       System.err.println("Error opening index.");
       e.printStackTrace();
@@ -123,7 +172,7 @@ public class YoutubeRetriever {
     }
     
     System.out.println("<h3>Results for query <u>" 
-                       + queryString 
+                       + commentQueryString 
                        + "</u></h3>");
     
     ScoreDoc[] hits = docs.scoreDocs;
@@ -132,12 +181,19 @@ public class YoutubeRetriever {
         Document doc = searcher.doc(docId);
         
         String highlightedText;
-        try {
-          highlightedText = getHighlightedField(query, analyzer, 
-                                                "commentText", doc.get("commentText"));
-        } catch (InvalidTokenOffsetsException e) {
+        if (commentQueryString != null) {
+          try {
+            highlightedText = getHighlightedField(query, analyzer, 
+                                                  "commentText", doc.get("commentText"));
+          } catch (InvalidTokenOffsetsException e) {
+            highlightedText = doc.get("commentText");
+          }
+        } else {
+          // Don't call getHighlightedField() if there is no search on the field "commentText"!
+          // See the NOTE section of the Javadoc of getHighlightedField().
           highlightedText = doc.get("commentText");
         }
+        
         
         System.out.println("<p><b><i>" 
                            + (i + 1) 
@@ -148,8 +204,23 @@ public class YoutubeRetriever {
     }
   }
   
+  /**
+   * Mark highlights in a field with a given query.
+   * 
+   * Note the query must have a clause that searches the given field, otherwise the returned result
+   * will be null instead of the original content without highlight (even if there are clauses that
+   * search for other fields in the query)
+   * 
+   * @param query The Query object.
+   * @param analyzer The Analyzer object for the query.
+   * @param fieldName Name of the field to search for highlights.
+   * @param fieldValue Content of the field to search for highlights.
+   * @return Highlight-modified content of the field.
+   * @throws IOException 
+   * @throws InvalidTokenOffsetsException
+   */
   private static String getHighlightedField(Query query, Analyzer analyzer, 
-                                     String fieldName, String fieldValue) 
+                                            String fieldName, String fieldValue) 
                                          throws IOException, InvalidTokenOffsetsException {
     Formatter formatter = new SimpleHTMLFormatter("<b>", "</b>");
     QueryScorer queryScorer = new QueryScorer(query);
