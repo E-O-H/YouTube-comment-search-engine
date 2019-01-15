@@ -120,37 +120,37 @@ public class YoutubeRetriever {
     BooleanQuery.Builder booleanQueryBuilder = new BooleanQuery.Builder();
     
     // Comment query
-    if (commentQueryString != null) {
+    if (commentQueryString != null && ! commentQueryString.isEmpty()) {
       Query commentQuery = new QueryParser("commentText", analyzer).parse(commentQueryString);
       booleanQueryBuilder.add(commentQuery, Occur.MUST);
     }
     // Username query
-    if (userNameString != null) {
+    if (userNameString != null && ! userNameString.isEmpty()) {
       Query userNameQuery = new QueryParser("userName", analyzer).parse(userNameString);
       booleanQueryBuilder.add(userNameQuery, Occur.MUST);
     }
     // User Id query
-    if (userIdString != null) {
+    if (userIdString != null && ! userIdString.isEmpty()) {
       Query userIdQuery = new QueryParser("userId", analyzer).parse(userIdString);
       booleanQueryBuilder.add(userIdQuery, Occur.MUST);
     }
     // Video title query
-    if (videoTitleString != null) {
+    if (videoTitleString != null && ! videoTitleString.isEmpty()) {
       Query videoTitleQuery = new QueryParser("videoTitle", analyzer).parse(videoTitleString);
       booleanQueryBuilder.add(videoTitleQuery, Occur.MUST);
     }
     // Video Id query
-    if (videoIdString != null) {
+    if (videoIdString != null && ! videoIdString.isEmpty()) {
       Query videoIdQuery = new QueryParser("videoId", analyzer).parse(videoIdString);
       booleanQueryBuilder.add(videoIdQuery, Occur.MUST);
     }
     // Channel title query
-    if (channelTitleString != null) {
+    if (channelTitleString != null && ! channelTitleString.isEmpty()) {
       Query channelTitleQuery = new QueryParser("channelTitle", analyzer).parse(channelTitleString);
       booleanQueryBuilder.add(channelTitleQuery, Occur.MUST);
     }
     // Channel Id query
-    if (channelIdString != null) {
+    if (channelIdString != null && ! channelIdString.isEmpty()) {
       Query channelIdQuery = new QueryParser("channelId", analyzer).parse(channelIdString);
       booleanQueryBuilder.add(channelIdQuery, Occur.MUST);
     }
