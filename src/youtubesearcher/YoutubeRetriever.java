@@ -24,15 +24,11 @@ import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
 import org.apache.lucene.search.highlight.SimpleSpanFragmenter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-import org.jsoup.Connection;
-import org.jsoup.Jsoup;
+
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 /**
  * Retriever for searching a Youtube comments index
@@ -78,8 +74,12 @@ public class YoutubeRetriever {
       usage = "A list of channel IDs to filter the search result. Separated by space.")
   private String channelIdString;
   
+  @Option(name = "-page", aliases = "-p",
+      usage = "Page number of the search results to output.")
+  private int page = 1; 
+  
   @Option(name = "-max", aliases = "-m",
-      usage = "Maximum number of search results to output.")
+      usage = "Maximum number of search results to output for each page.")
   private int hitsPerPage = 20; 
   
   @Option(name = "-help", aliases = "-h", help = true,
@@ -180,8 +180,22 @@ public class YoutubeRetriever {
       reader = DirectoryReader.open(index);
       searcher = new IndexSearcher(reader);
       docs = searcher.search(finalQuery, hitsPerPage);
+      ScoreDoc[] results = docs.scoreDocs;
       
-      outputResults(finalQuery);
+      int numTotalHits = docs.totalHits;
+
+      if (page > 1 && (page - 1) * hitsPerPage < numTotalHits) {
+        for (int i = 0; i < page - 1; ++i) {
+          ScoreDoc lastHit = results[results.length - 1];
+          docs = searcher.searchAfter(lastHit, finalQuery, hitsPerPage);
+          results = docs.scoreDocs;
+        }
+      }
+      
+      outputPagination(numTotalHits);
+      outputResults(results, page, finalQuery);
+      outputPagination(numTotalHits);
+      
     } catch (IOException e) {
       System.err.println("Error opening index.");
       e.printStackTrace();
@@ -194,10 +208,12 @@ public class YoutubeRetriever {
   /**
    * Output results as an HTML snippet
    * 
-   * @param query Query object (used for highlighting result)
+   * @param results The hits to display
+   * @param page The page number (used for the number before each result)
+   * @param query Query object (used for highlighting search terms in results)
    * @throws IOException 
    */
-  private void outputResults(Query query) throws IOException {
+  private void outputResults(ScoreDoc[] results, int page, Query query) throws IOException {
     if (searcher.getIndexReader().maxDoc() == 0) {
       System.err.println("No document in the index!");
       return;
@@ -207,9 +223,8 @@ public class YoutubeRetriever {
                        + commentQueryString 
                        + "</u></h3>");
     
-    ScoreDoc[] hits = docs.scoreDocs;
-    for(int i = 0; i < hits.length; ++i) {
-        int docId = hits[i].doc;
+    for(int i = 0; i < results.length; ++i) {
+        int docId = results[i].doc;
         Document doc = searcher.doc(docId);
         
         String highlightedText;
@@ -227,18 +242,27 @@ public class YoutubeRetriever {
         }
         
         System.out.println("<p><b><i>" 
-                           + (i + 1) 
+                           + (i + 1 + (page - 1) * hitsPerPage) 
                            + "</i>. " 
                            + doc.get("userName") 
-                           + " on video: "
+                           + " commented on video: \n"
                            + doc.get("videoTitle")
-                           + "</b>"
-                           + " from channel: "
+                           + "\n"
+                           + "  from channel: "
                            + doc.get("channelTitle")
                            + "<br><span style='margin-left:3em'>" 
                            + highlightedText
-                           + "</span></p>");
+                           + "</span></b></p>");
     }
+  }
+  
+  /**
+   * Prints out the interactive pagination in HTML format
+   * 
+   * @param numTotalHits Total number of results
+   */
+  private void outputPagination(int numTotalHits) {
+    
   }
   
   /**
