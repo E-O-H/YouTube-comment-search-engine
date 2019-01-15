@@ -39,17 +39,17 @@ if [ -n "$QUERY_STRING" ]; then
   commentQuery=`echo $QUERY_STRING | sed -n 's/^.*commentQuery=\([^&]*\).*$/\1/p' \
                 | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'`
   usernameQuery=`echo $QUERY_STRING | sed -n 's/^.*usernameQuery=\([^&]*\).*$/\1/p' \
-                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'
+                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'`
   userIdQuery=`echo $QUERY_STRING | sed -n 's/^.*userIdQuery=\([^&]*\).*$/\1/p' \
-                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'
+                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'`
   videoTitleQuery=`echo $QUERY_STRING | sed -n 's/^.*videoTitleQuery=\([^&]*\).*$/\1/p' \
-                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'
+                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'`
   videoIdQuery=`echo $QUERY_STRING | sed -n 's/^.*videoIdQuery=\([^&]*\).*$/\1/p' \
-                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'
+                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'`
   channelTitleQuery=`echo $QUERY_STRING | sed -n 's/^.*channelTitleQuery=\([^&]*\).*$/\1/p' \
-                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'
+                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'`
   channelIdQuery=`echo $QUERY_STRING | sed -n 's/^.*channelIdQuery=\([^&]*\).*$/\1/p' \
-                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'
+                | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'`
 
   classpath="/home/ct1856/public_html/java-bin/"
   indexpath="/home/ct1856/public_html/WSE-project-index-files/index"
