@@ -30,6 +30,10 @@ cat << WRITE_HTML
   </form>
 (Tips: you can leave the search box blank and only fill in the filters, e.g. to search for all comments from a user. To filter for multiple users/videos/channels, separate them with spaces; to match exact names, use double quotes.)
 <hr>
+<style type="text/css">
+  a {text-decoration: none;}
+  a:hover {text-decoration: underline;}
+</style>
 WRITE_HTML
 
 # If there is a non-empty query string submitted in URL,

@@ -241,7 +241,9 @@ public class YoutubeRetriever {
           highlightedText = doc.get("commentText");
         }
         
-        System.out.println("<p><b><i>" 
+        // The font is the same as that used by Youtube comments
+        System.out.println("<p style = \"font-family:Roboto,Arial,sans-serif;font-size:16px;\">"
+                           + "<b><i>" 
                            + (i + 1 + (page - 1) * hitsPerPage) 
                            + "</i>. " 
                            + doc.get("userName") 
