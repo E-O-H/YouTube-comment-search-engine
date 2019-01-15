@@ -250,9 +250,10 @@ public class YoutubeRetriever {
                            + "\n"
                            + "  from channel: "
                            + doc.get("channelTitle")
-                           + "<br><span style='margin-left:3em'>" 
+                           + "<br></b>"
+                           + "<span style='margin-left:3em'>" 
                            + highlightedText
-                           + "</span></b></p>");
+                           + "</span></p>");
     }
   }
   
