@@ -62,9 +62,21 @@ public class YoutubeRetriever {
       usage = "A list of user IDs to filter the search result. Separated by space.")
   private String userIdString;
   
+  @Option(name = "-video-title", aliases = "-vt",
+      usage = "Video titles to filter the search result. Double quote a title for exact match.")
+  private String videoTitleString;
+  
   @Option(name = "-videoId", aliases = "-vi",
       usage = "A list of video IDs to filter the search result. Separated by space.")
   private String videoIdString;
+  
+  @Option(name = "-channel-title", aliases = "-ct",
+      usage = "Channel titles to filter the search result. Double quote a name for exact match.")
+  private String channelTitleString;
+  
+  @Option(name = "-channelId", aliases = "-ci",
+      usage = "A list of channel IDs to filter the search result. Separated by space.")
+  private String channelIdString;
   
   @Option(name = "-max", aliases = "-m",
       usage = "Maximum number of search results to output.")
@@ -112,21 +124,35 @@ public class YoutubeRetriever {
       Query commentQuery = new QueryParser("commentText", analyzer).parse(commentQueryString);
       booleanQueryBuilder.add(commentQuery, Occur.MUST);
     }
-    
     // Username query
     if (userNameString != null) {
       Query userNameQuery = new QueryParser("userName", analyzer).parse(userNameString);
       booleanQueryBuilder.add(userNameQuery, Occur.MUST);
     }
-    // UserId query
+    // User Id query
     if (userIdString != null) {
       Query userIdQuery = new QueryParser("userId", analyzer).parse(userIdString);
       booleanQueryBuilder.add(userIdQuery, Occur.MUST);
     }
-    // VideoId query
+    // Video title query
+    if (videoTitleString != null) {
+      Query videoTitleQuery = new QueryParser("videoTitle", analyzer).parse(videoTitleString);
+      booleanQueryBuilder.add(videoTitleQuery, Occur.MUST);
+    }
+    // Video Id query
     if (videoIdString != null) {
       Query videoIdQuery = new QueryParser("videoId", analyzer).parse(videoIdString);
       booleanQueryBuilder.add(videoIdQuery, Occur.MUST);
+    }
+    // Channel title query
+    if (channelTitleString != null) {
+      Query channelTitleQuery = new QueryParser("channelTitle", analyzer).parse(channelTitleString);
+      booleanQueryBuilder.add(channelTitleQuery, Occur.MUST);
+    }
+    // Channel Id query
+    if (channelIdString != null) {
+      Query channelIdQuery = new QueryParser("channelId", analyzer).parse(channelIdString);
+      booleanQueryBuilder.add(channelIdQuery, Occur.MUST);
     }
     
     return booleanQueryBuilder.build();
