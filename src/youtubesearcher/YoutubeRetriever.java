@@ -213,7 +213,7 @@ public class YoutubeRetriever {
         Document doc = searcher.doc(docId);
         
         String highlightedText;
-        if (commentQueryString != null) {
+        if (commentQueryString != null && ! commentQueryString.isEmpty()) {
           try {
             highlightedText = getHighlightedField(query, analyzer, 
                                                   "commentText", doc.get("commentText"));
