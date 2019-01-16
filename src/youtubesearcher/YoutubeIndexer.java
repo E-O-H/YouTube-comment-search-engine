@@ -18,6 +18,7 @@ import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.LockObtainFailedException;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.kohsuke.args4j.CmdLineException;
@@ -643,11 +644,19 @@ public class YoutubeIndexer {
         System.out.println("DONE");
       } while (topLevelPageToken != null);
       
+    } catch (LockObtainFailedException e) {
+      System.err.println("Index is currently busy (write lock held by another indexer thread). \n"
+                         + "Please wait until the current indexing finish and try again later. \n"
+                         + "(Or contact the author to switch to another index for you on the "
+                         + "back-end. Making new index is currently not supported "
+                         + "on the front-end.)");
+      return;
     } catch (IOException e) {
       System.err.println("Error making index.");
-      e.printStackTrace();
       return;
     }
+    
+    System.out.println("Indexing all finished.");
   }
   
   public static void main(String[] args) {
@@ -665,7 +674,6 @@ public class YoutubeIndexer {
       System.exit(-1);
     }
     youtubeIndexer.buildCommentIndex(scope, youtubeIndexer.id);
-    System.out.println("Indexing all finished.");
   }
 
 }
