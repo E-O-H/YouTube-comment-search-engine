@@ -52,7 +52,7 @@ public class YoutubeRetriever {
   
   @Option(name = "-username", aliases = "-un",
       usage = "Usernames to filter the search result. Double quote a username for exact match.")
-  private String userNameString;
+  private String usernameString;
   
   @Option(name = "-userId", aliases = "-ui",
       usage = "A list of user IDs to filter the search result. Separated by space.")
@@ -81,6 +81,10 @@ public class YoutubeRetriever {
   @Option(name = "-max", aliases = "-m",
       usage = "Maximum number of search results to output for each page.")
   private int hitsPerPage = 20; 
+  
+  @Option(name = "-webpage-URL", aliases = "-w",
+      usage = "URL of the search engine webpage; needed to correctly render links")
+  private String webpageUrl; 
   
   @Option(name = "-help", aliases = "-h", help = true,
           usage = "Print help text.")
@@ -125,8 +129,8 @@ public class YoutubeRetriever {
       booleanQueryBuilder.add(commentQuery, Occur.MUST);
     }
     // Username query
-    if (userNameString != null && ! userNameString.isEmpty()) {
-      Query userNameQuery = new QueryParser("userName", analyzer).parse(userNameString);
+    if (usernameString != null && ! usernameString.isEmpty()) {
+      Query userNameQuery = new QueryParser("userName", analyzer).parse(usernameString);
       booleanQueryBuilder.add(userNameQuery, Occur.MUST);
     }
     // User Id query
@@ -192,6 +196,10 @@ public class YoutubeRetriever {
         }
       }
       
+      System.out.println("<h3>Results for query <u>" 
+          + commentQueryString 
+          + "</u></h3>");
+      
       outputPagination(numTotalHits);
       outputResults(results, page, finalQuery);
       outputPagination(numTotalHits);
@@ -218,10 +226,6 @@ public class YoutubeRetriever {
       System.err.println("No document in the index!");
       return;
     }
-    
-    System.out.println("<h3>Results for query <u>" 
-                       + commentQueryString 
-                       + "</u></h3>");
     
     for(int i = 0; i < results.length; ++i) {
         int docId = results[i].doc;
@@ -265,7 +269,77 @@ public class YoutubeRetriever {
    * @param numTotalHits Total number of results
    */
   private void outputPagination(int numTotalHits) {
+    final int PEEK_RANGE = 9;
+    int lastPage = numTotalHits / hitsPerPage + (numTotalHits % hitsPerPage != 0 ? 1 : 0);
     
+    String html = "";
+    if (lastPage != 1) {
+      html += "&nbsp&nbsp";
+      if (page != 1) {
+        html += printPageLink(1, "First") + "&nbsp&nbsp"
+                + printPageLink(page - 1, "Prev");
+      }
+      
+      if (page > 1 + PEEK_RANGE) {
+        html += " ...";
+      } else {
+        html += "&nbsp&nbsp";
+      }
+      
+      for (int i = Math.max(page - PEEK_RANGE, 1); i < page; ++i) {
+        html += printPageLink(i, String.valueOf(i)) + "&nbsp&nbsp";
+      }
+      
+      html += String.valueOf(page);
+      
+      for (int i = page + 1; i < Math.min(page + PEEK_RANGE, lastPage); ++i) {
+        html += "&nbsp&nbsp" + printPageLink(i, String.valueOf(i));
+      }
+
+      if (page < lastPage - PEEK_RANGE) {
+        html += "... ";
+      } else {
+        html += "&nbsp&nbsp";
+      }
+      
+      if (page != lastPage) {
+        html += printPageLink(page + 1, "Next") + "&nbsp&nbsp"
+                + printPageLink(lastPage, "Last");
+                
+      }
+    }
+    
+    html += "<br><span style='margin-left:1em'>"
+             + "Displaying page " + page + " of " + lastPage
+             + "<br></span>";
+        
+    System.out.println(html);
+  }
+  
+  /**
+   * Prints the HTML hyperlink for a page
+   * 
+   * @param page The page number to link to.
+   * @param anchorText The anchor text to display for the link.
+   * @return HTML code of a link.
+   */
+  private String printPageLink(int pageNumber, String anchorText) {
+    String html;
+    html = "<a href=\"" 
+           + webpageUrl 
+           + "?page=" + pageNumber
+           + "&max=" + hitsPerPage
+           + "&commentQuery=" + commentQueryString
+           + "&usernameQuery=" + usernameString
+           + "&userIdQuery=" + userIdString
+           + "&videoTitleQuery=" + videoTitleString
+           + "&videoIdQuery=" + videoIdString
+           + "&channelTitleQuery=" + channelTitleString
+           + "&channelIdQuery=" + channelIdString
+           + "\">"
+           + anchorText
+           + "</a>";
+    return html;
   }
   
   /**

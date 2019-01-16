@@ -96,7 +96,7 @@ HTML_PART_2
 # If there is a non-empty query string submitted in URL,
 # do the search and output the result.
 if [[ -n "$QUERY_STRING" ]]; then
-  # Extract the input value of the query
+  # Extract the input values of the query
   commentQuery=`echo $QUERY_STRING | sed -n 's/^.*commentQuery=\([^&]*\).*$/\1/p' \
                 | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'`
   usernameQuery=`echo $QUERY_STRING | sed -n 's/^.*usernameQuery=\([^&]*\).*$/\1/p' \
@@ -111,11 +111,21 @@ if [[ -n "$QUERY_STRING" ]]; then
                 | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'`
   channelIdQuery=`echo $QUERY_STRING | sed -n 's/^.*channelIdQuery=\([^&]*\).*$/\1/p' \
                 | sed 's/+/ /g' | sed 's/%2B/+/g' | sed 's/%22/\"/g' | sed 's/%20/ /g'`
+  page=`echo $QUERY_STRING | sed -n 's/^.*page=\([^&]*\).*$/\1/p'`
+  max=`echo $QUERY_STRING | sed -n 's/^.*max=\([^&]*\).*$/\1/p'`
+
+  if [[ -z "$page" ]]; then
+    page=1
+  fi
+  if [[ -z "$max" ]]; then
+    max=20
+  fi
+
   if [[ ( -n "$commentQuery" ) || ( -n "$usernameQuery" ) || ( -n "$userIdQuery" ) || ( -n "$videoTitleQuery" ) \
         || ( -n "$videoIdQuery" ) || ( -n "$channelTitleQuery" ) || ( -n "$channelIdQuery" ) ]]; then
     classpath="/home/ct1856/public_html/java-bin/"
     indexpath="/home/ct1856/public_html/WSE-project-index-files/index"
-    java -cp "${classpath}/args4j-2.33.jar:${classpath}/jsoup-1.11.3/jsoup-1.11.3.jar:${classpath}/lucene-6.6.0/core/lucene-core-6.6.0.jar:${classpath}/lucene-6.6.0/queryparser/lucene-queryparser-6.6.0.jar:${classpath}/lucene-6.6.0/highlighter/lucene-highlighter-6.6.0.jar:${classpath}/lucene-6.6.0/memory/lucene-memory-6.6.0.jar:${classpath}/gson-2.6.2.jar:${classpath}:bin:." youtubesearcher.YoutubeRetriever -i "$indexpath" -q "$commentQuery" -un "$usernameQuery" -ui "$userIdQuery" -vt "$videoTitleQuery" -vi "$videoIdQuery" -ct "$channelTitleQuery" -ci "$channelIdQuery"
+    java -cp "${classpath}/args4j-2.33.jar:${classpath}/jsoup-1.11.3/jsoup-1.11.3.jar:${classpath}/lucene-6.6.0/core/lucene-core-6.6.0.jar:${classpath}/lucene-6.6.0/queryparser/lucene-queryparser-6.6.0.jar:${classpath}/lucene-6.6.0/highlighter/lucene-highlighter-6.6.0.jar:${classpath}/lucene-6.6.0/memory/lucene-memory-6.6.0.jar:${classpath}/gson-2.6.2.jar:${classpath}:bin:." youtubesearcher.YoutubeRetriever -i "$indexpath" -w "$SCRIPT_NAME" -q "$commentQuery" -un "$usernameQuery" -ui "$userIdQuery" -vt "$videoTitleQuery" -vi "$videoIdQuery" -ct "$channelTitleQuery" -ci "$channelIdQuery" -p "$page" -m "$max"
   fi
 fi
 
