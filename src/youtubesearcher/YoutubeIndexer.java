@@ -639,8 +639,11 @@ public class YoutubeIndexer {
           }
           continue;
         }
-        System.err.print("\n");
-        numRetry = 0; // Reset number of retries if the program successfully moved pass this point.
+        // If the program successfully moved pass this point, it means error is resolved.
+        if (numRetry != 0) {
+          System.err.print("\n");
+          numRetry = 0; // Reset number of retries 
+        }
         
         JsonArray topLevelComments = topLevelPage.getComments();
         for (int i = 0; i < topLevelComments.size(); ++i) {
