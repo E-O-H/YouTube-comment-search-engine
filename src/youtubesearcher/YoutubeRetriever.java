@@ -22,6 +22,7 @@ import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
 import org.apache.lucene.search.highlight.QueryScorer;
 import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
 import org.apache.lucene.search.highlight.SimpleSpanFragmenter;
+import org.apache.lucene.search.spell.SpellChecker;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
@@ -80,11 +81,16 @@ public class YoutubeRetriever {
   
   @Option(name = "-max", aliases = "-m",
       usage = "Maximum number of search results to output for each page.")
-  private int hitsPerPage = 20; 
+  private int hitsPerPage = 10; 
   
   @Option(name = "-webpage-URL", aliases = "-w",
       usage = "URL of the search engine webpage; needed to correctly render links")
   private String webpageUrl; 
+  
+  @Option(name = "-dictionary", aliases = "-d", 
+      usage = "Path to the dictionary index used for spellchecking and suggestion. "
+              + "If not provided this feature will be disabled.")
+private File dictionaryPath;
   
   @Option(name = "-help", aliases = "-h", help = true,
           usage = "Print help text.")
@@ -196,10 +202,28 @@ public class YoutubeRetriever {
         }
       }
       
-      System.out.println("<h2>Results for query <u>" 
-          + commentQueryString 
-          + "</u></h2>");
+      String[] suggestions = suggest(commentQueryString, 1);
       
+      System.out.println("<h2>Results for query <u>" 
+                         + commentQueryString + "</u>");
+      if (suggestions != null && suggestions.length != 0) {
+        System.out.println("(Or did you mean "
+                           + "<a href=\"" 
+                           + webpageUrl 
+                           + "?commentQuery=" + suggestions[0]
+                           + "&usernameQuery=" + usernameString
+                           + "&userIdQuery=" + userIdString
+                           + "&videoTitleQuery=" + videoTitleString
+                           + "&videoIdQuery=" + videoIdString
+                           + "&channelTitleQuery=" + channelTitleString
+                           + "&channelIdQuery=" + channelIdString
+                           + "&max=" + hitsPerPage
+                           + "\">"
+                           + suggestions[0]
+                           + "</a>?)");
+      }
+      System.out.println("</h2>");
+                         
       outputPagination(numTotalHits);
       outputResults(results, page, finalQuery);
       outputPagination(numTotalHits);
@@ -311,6 +335,9 @@ public class YoutubeRetriever {
    */
   private void outputPagination(int numTotalHits) {
     final int PEEK_RANGE = 9;
+    
+    if (numTotalHits == 0) return;
+    
     int lastPage = numTotalHits / hitsPerPage + (numTotalHits % hitsPerPage != 0 ? 1 : 0);
     
     String html = "";
@@ -383,6 +410,23 @@ public class YoutubeRetriever {
            + anchorText
            + "</a>";
     return html;
+  }
+  
+  /**
+   * Spellchecker. Return a list of suggestions.
+   * 
+   * @param input Input word.
+   * @param num Number of suggestions.
+   * @return A list of suggested words. Return null if failed.
+   */
+  private String[] suggest(String input, int num) {
+    if (dictionaryPath == null) return null;
+    try (Directory directory = FSDirectory.open(dictionaryPath.toPath());
+         SpellChecker spellChecker = new SpellChecker(directory)) {
+      return spellChecker.suggestSimilar(input, num);
+    } catch (IOException e) {
+      return null;
+    }
   }
   
   /**

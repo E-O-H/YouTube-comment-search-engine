@@ -85,7 +85,7 @@ cat << HTML_PART_2
     </td>
   </table>
 <b>Can't find the comment you are looking for? Maybe it hasn't been indexed.</b> If the video containing the comments you are searching for has not yet been indexed, you should first add the video to the index in the right pannel. It is also supported to index in the scope of a channel, which will add all videos in the channel at once to the index, but please think twice before you decide to use this feature, as this will take a REALLY long time if the channel has a lot of videos. You can find the video ID in the URL to a video; for channel IDs, you need to find them in the page source in a variable named "externalId".<br>
-<i>Tips: you can leave the search box blank and only fill in the filters, e.g. to search for all comments from a user. To filter for multiple users/videos/channels, separate them with spaces; to match exact names, use double quotes. You can click on a comment to jump to it.</i>
+<i>Tips: you can leave the search box blank and only fill in the filters, e.g. to search for all comments from a user. To filter for multiple users/videos/channels, separate them with spaces; to match exact names, use double quotes. If you want to see the comment thread of a reply, you can click on it to jump to the thread.</i>
 <hr>
 <style type="text/css">
   a {text-decoration: none;}
@@ -118,14 +118,15 @@ if [[ -n "$QUERY_STRING" ]]; then
     page=1
   fi
   if [[ -z "$max" ]]; then
-    max=20
+    max=10
   fi
 
   if [[ ( -n "$commentQuery" ) || ( -n "$usernameQuery" ) || ( -n "$userIdQuery" ) || ( -n "$videoTitleQuery" ) \
         || ( -n "$videoIdQuery" ) || ( -n "$channelTitleQuery" ) || ( -n "$channelIdQuery" ) ]]; then
     classpath="/home/ct1856/public_html/java-bin/"
     indexpath="/home/ct1856/public_html/WSE-project-index-files/index"
-    java -cp "${classpath}/args4j-2.33.jar:${classpath}/jsoup-1.11.3/jsoup-1.11.3.jar:${classpath}/lucene-6.6.0/core/lucene-core-6.6.0.jar:${classpath}/lucene-6.6.0/queryparser/lucene-queryparser-6.6.0.jar:${classpath}/lucene-6.6.0/highlighter/lucene-highlighter-6.6.0.jar:${classpath}/lucene-6.6.0/memory/lucene-memory-6.6.0.jar:${classpath}/gson-2.6.2.jar:${classpath}:bin:." youtubesearcher.YoutubeRetriever -i "$indexpath" -w "$SCRIPT_NAME" -q "$commentQuery" -un "$usernameQuery" -ui "$userIdQuery" -vt "$videoTitleQuery" -vi "$videoIdQuery" -ct "$channelTitleQuery" -ci "$channelIdQuery" -p "$page" -m "$max"
+    dictionarypath="/home/ct1856/public_html/WSE-project-index-files/dictionary_index"
+    java -cp "${classpath}/args4j-2.33.jar:${classpath}/jsoup-1.11.3/jsoup-1.11.3.jar:${classpath}/lucene-6.6.0/core/lucene-core-6.6.0.jar:${classpath}/lucene-6.6.0/queryparser/lucene-queryparser-6.6.0.jar:${classpath}/lucene-6.6.0/highlighter/lucene-highlighter-6.6.0.jar:${classpath}/lucene-6.6.0/memory/lucene-memory-6.6.0.jar:${classpath}/lucene-6.6.0/suggest/lucene-suggest-6.6.0.jar:${classpath}/gson-2.6.2.jar:${classpath}:bin:." youtubesearcher.YoutubeRetriever -i "$indexpath" -d "$dictionarypath" -w "$SCRIPT_NAME" -q "$commentQuery" -un "$usernameQuery" -ui "$userIdQuery" -vt "$videoTitleQuery" -vi "$videoIdQuery" -ct "$channelTitleQuery" -ci "$channelIdQuery" -p "$page" -m "$max"
   fi
 fi
 
