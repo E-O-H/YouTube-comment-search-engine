@@ -28,8 +28,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import youtubesearcher.YoutubeRetriever.Video;
-
 /**
  * Indexer for indexing Youtube comments
  * 
