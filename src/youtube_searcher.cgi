@@ -77,14 +77,14 @@ if [[ -n "$QUERY_STRING" ]]; then
               2>&1 | nc seashells.io 1337)
     sleep 0.1                                  # sleep 100ms to make sure the output by nc (our URL) is already written to fd3.
     read <&3 discard discard indexProgressUrl  # Read one line from fd3 and assign content starting from the 3rd token to $indexProgressUrl.
-    echo "<center><a href=$indexProgressUrl target="_blank">See the index progress in real-time</a></center>"
+    echo "<center><a href=$indexProgressUrl target="_blank">See indexing progress in real-time</a></center>"
   fi
 fi
 
 cat << HTML_PART_2
     </td>
   </table>
-<b>Can't find the comment you are looking for? Maybe it hasn't been indexed.</b> If the video containing the comments you are searching for has not yet been indexed, you should first add the video to the index in the right pannel. It is also supported to index in the scope of a channel, which will add all videos in the channel at once to the index, but please think twice before you decide to use this feature, as this will take a REALLY long time if the channel has a lot of videos. You can find the video ID in the URL to a video; for channel IDs, you need to find them in the page source in a variable named "externalId".<br>
+<b>Can't find the comment you are looking for? Maybe it hasn't been indexed.</b> If the video containing the comments you are searching for has not yet been indexed, you should first add the video to the index in the right pannel. It is also supported to index in the scope of a channel, which will add all videos in the channel to the index, but please think twice before you decide to use this feature, as this will take a REALLY long time if the channel has a lot of videos. You can find the video ID in the URL to a video; for channel IDs, you need to find them in the page source in a variable named "externalId".<br>
 <i>Tips: you can leave the search box blank and only fill in the filters, e.g. to search for all comments from a user. To filter for multiple users/videos/channels, separate them with spaces; to match exact names, use double quotes. If you want to see the comment thread of a reply, you can click on it to jump to the thread.</i>
 <hr>
 <style type="text/css">
