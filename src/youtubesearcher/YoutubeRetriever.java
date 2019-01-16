@@ -196,9 +196,9 @@ public class YoutubeRetriever {
         }
       }
       
-      System.out.println("<h3>Results for query <u>" 
+      System.out.println("<h2>Results for query <u>" 
           + commentQueryString 
-          + "</u></h3>");
+          + "</u></h2>");
       
       outputPagination(numTotalHits);
       outputResults(results, page, finalQuery);
@@ -246,20 +246,61 @@ public class YoutubeRetriever {
         }
         
         // The font is the same as that used by Youtube comments
-        System.out.println("<p style = \"font-family:Roboto,Arial,sans-serif;font-size:16px;\">"
-                           + "<b><i>" 
-                           + (i + 1 + (page - 1) * hitsPerPage) 
-                           + "</i>. " 
-                           + doc.get("userName") 
-                           + " commented on video: \n"
-                           + doc.get("videoTitle")
-                           + "\n"
-                           + "  from channel: "
-                           + doc.get("channelTitle")
-                           + "<br></b>"
-                           + "<span style='margin-left:3em'>" 
-                           + highlightedText
-                           + "</span></p>");
+        String html = "<p style='font-family:Roboto,Arial,sans-serif;'>"
+                        + "<span style='font-size:1.3rem;font-weight:bold;'>"
+                          + "<i>" 
+                            + (i + 1 + (page - 1) * hitsPerPage) 
+                          + "</i>. " 
+                          + "<a href=\"https://www.youtube.com/channel/"
+                            + doc.get("userId")
+                          + "\">"
+                            + "<img src=\""
+                              + doc.get("profilePicture")
+                            + "\" width=20 height=20>"
+                            + doc.get("userName") 
+                          + "</a>"
+                        + "</span>"
+                        + " commented on video<br>"
+                        + "<table style='font-family:Roboto,Arial,sans-serif;'>"
+                        + "<td>"
+                          + "<a href=\"https://www.youtube.com/watch?v="
+                            + doc.get("videoId")
+                          + "\">"
+                            + "<img src=\""
+                              + doc.get("videoThumbnail")
+                            + "\">"
+                          + "</a>"
+                        + "</td>"
+                        + "<td>"
+                          + "<a href=\"https://www.youtube.com/watch?v="
+                            + doc.get("videoId")
+                          + "\">"
+                            + "<span style='font-size:1.2rem;font-weight:bold;'>"
+                              + doc.get("videoTitle")
+                            + "</span>"
+                          + "</a>"
+                          + "<span style='font-size:0.7rem;font-weight:bold;'>" 
+                            + "<br>  from channel: "
+                            + "<a href=\"https://www.youtube.com/channel/"
+                              + doc.get("channelId")
+                            + "\">"
+                              + doc.get("channelTitle")
+                            + "</a><br>"
+                          + "</span>"
+                        + "<a href=\"https://www.youtube.com/watch?v="
+                          + doc.get("videoId")
+                          + "&lc="
+                          + doc.get("commentId")
+                        + "\">"
+                          + "<span style='font-size:0.9rem;margin-left:2em;'>\"" 
+                            + highlightedText
+                          + "\"</span>"
+                        + "</a>"
+                      + "</td>"
+                      + "</table>"
+                      + "</p>";
+          
+        System.out.println(html);
     }
   }
   
@@ -310,7 +351,9 @@ public class YoutubeRetriever {
     }
     
     html += "<br><span style='margin-left:1em'>"
-             + "Displaying page " + page + " of " + lastPage
+             + "Displaying results " + (hitsPerPage * (page - 1) + 1) + " ~ "
+             + (hitsPerPage * (page - 1) + hitsPerPage)
+             + " (page " + page + " of " + lastPage + ")"
              + "<br></span>";
         
     System.out.println(html);
