@@ -69,10 +69,17 @@ if [[ -n "$QUERY_STRING" ]]; then
     # in real-time before the program is finished, which allows the shell script to move on (in this case it
     # captures the URL that hosts the output of the indexer and renders a hyper-link with it on the webpage).
     # Without using this trick, the webpage will stuck in loading until the indexer finishes running.
-    # (Note the exec command here is not used to execute a program; it is used to open a file descriptor ( 
-    # which is fd3 in this case) and associate it with a file (which is a virtual file opened by the 
+    # (Note to self: the exec command here is not used to execute a program; it is used to open a file 
+    # descriptor (which is fd3 in this case) and associate it with a file (which is a virtual file opened by the 
     # process substitution in this case) This usage of exec is provided in bash and ksh; process substitution
     # is only provided in bash.)
+    # (Also note that one cannot use a further pipe in the process substitution like "cut -d ' ' -f 3" to extract
+    # the URL BEFORE writing to the file descriptor; that would result in delay of write to fd3, which will 
+    # cause the read command to stuck in waiting and webpage stuck in loading as a result. This was a pitfall 
+    # that costed me a lot of time to realize.)
+    # (Also note that you cannot add an & at the end of the exec command. It will break the program. However 
+    # you CAN add a & INSIDE the process substitution, but it is not necessary, as the process substitution itself
+    # is already running in the background.)
     exec 3< <(java -cp "${classpath}/args4j-2.33.jar:${classpath}/jsoup-1.11.3/jsoup-1.11.3.jar:${classpath}/lucene-6.6.0/core/lucene-core-6.6.0.jar:${classpath}/gson-2.6.2.jar:${classpath}:bin:." youtubesearcher.YoutubeIndexer -p "$indexpath" "$indexScopeFlag" -i "$indexScopeId" \
               2>&1 | nc seashells.io 1337)
     sleep 0.1                                  # sleep 100ms to make sure the output by nc (our URL) is already written to fd3.
