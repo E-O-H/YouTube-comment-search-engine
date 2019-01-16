@@ -157,6 +157,7 @@ public class YoutubeIndexer {
     try {
        response = Jsoup.connect(urlStr)
                        .method(Connection.Method.GET)
+                       .referrer("https://cs.nyu.edu")
                        .ignoreContentType(true)
                        .maxBodySize(Integer.MAX_VALUE)
                        .execute();
@@ -200,6 +201,7 @@ public class YoutubeIndexer {
     try {
        response = Jsoup.connect(urlStr)
                        .method(Connection.Method.GET)
+                       .referrer("https://cs.nyu.edu")
                        .ignoreContentType(true)
                        .maxBodySize(Integer.MAX_VALUE)
                        .execute();
@@ -403,6 +405,7 @@ public class YoutubeIndexer {
     try {
        response = Jsoup.connect(urlStr)
                        .method(Connection.Method.GET)
+                       .referrer("https://cs.nyu.edu")
                        .ignoreContentType(true)
                        .maxBodySize(Integer.MAX_VALUE)
                        .execute();
@@ -664,6 +667,7 @@ public class YoutubeIndexer {
       System.exit(-1);
     }
     youtubeIndexer.buildCommentIndex(scope, youtubeIndexer.id);
+    System.out.println("Indexing all finished.");
   }
 
 }
