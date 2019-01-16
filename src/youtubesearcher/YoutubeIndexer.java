@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -89,6 +90,8 @@ public class YoutubeIndexer {
   
   private static final String URL_BASE = "https://www.googleapis.com/youtube/v3";
   private static String API_KEY = "AIzaSyDF7H_kAHJsIhijiIKU9cxZuK7sforZnIc";
+  
+  private static final int MAX_NETWORK_ERROR_RETRY = 9;
   
   /*
    * Lucene indexer internal objects
@@ -602,15 +605,43 @@ public class YoutubeIndexer {
     // Make a hash map cache for video information
     Map<String, Video> videoCache = new HashMap<String, Video>();
     
+    // Record number of retry times on network error
+    int numRetry = 0;
+    
     // Main indexer loop
     try (IndexWriter indexWriter = new IndexWriter(index, config)) {
       int pageNum = 1;
       String topLevelPageToken = null;
       do {
         // Loop top-level pages
-        System.out.print("Indexing top-level page " + pageNum + "...");
+        if (numRetry == 0) {
+          System.out.print("Indexing top-level page " + pageNum + "...");
+        }
         
         CommentsPage topLevelPage = downloadTopLevelCommentsPage(scope, scopeId, topLevelPageToken);
+        
+        // Handling network error (retry up to a certain times).
+        if (topLevelPage == null) {
+          if (numRetry == 0) {
+            System.err.println("\nNetwork error when requesting a page.");
+            System.err.print("  Number of retries: 0");
+          }
+          if (numRetry == MAX_NETWORK_ERROR_RETRY) {
+            System.err.println("\nReached max retry times. Terminating.");
+            return;
+          }
+          ++numRetry;
+          System.err.print("\b" + numRetry);
+          try {
+            TimeUnit.SECONDS.sleep(1);
+          } catch (InterruptedException e) {
+            continue;
+          }
+          continue;
+        }
+        System.err.print("\n");
+        numRetry = 0; // Reset number of retries if the program successfully moved pass this point.
+        
         JsonArray topLevelComments = topLevelPage.getComments();
         for (int i = 0; i < topLevelComments.size(); ++i) {
           // Loop comment threads (top-level comments)
