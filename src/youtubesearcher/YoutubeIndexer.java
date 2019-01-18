@@ -167,9 +167,6 @@ public class YoutubeIndexer {
                        .maxBodySize(Integer.MAX_VALUE)
                        .execute();
     } catch (IOException e) {
-      System.err.println(
-          "Network error when retrieving the page: " + urlStr + ".");
-      System.err.println(e.getMessage());
       return null;
     }
     
@@ -211,6 +208,9 @@ public class YoutubeIndexer {
                        .maxBodySize(Integer.MAX_VALUE)
                        .execute();
     } catch (IOException e) {
+      System.err.println(
+          "Network error when retrieving the page: " + urlStr + ".");
+      System.err.println(e.getMessage());
       return null;
     }
     
