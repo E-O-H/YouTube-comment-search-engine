@@ -2,8 +2,10 @@ package youtubesearcher;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -88,6 +90,7 @@ public class YoutubeIndexer {
     return 0;
   }
   
+  private static final String ERROR_LOG_FILE = "error_log.txt";
   private static final String URL_BASE = "https://www.googleapis.com/youtube/v3";
   private static String API_KEY = "AIzaSyDF7H_kAHJsIhijiIKU9cxZuK7sforZnIc";
   
@@ -312,38 +315,49 @@ public class YoutubeIndexer {
     public static Comment parseTopLevelComment(JsonObject jsonObj) {
       Comment ret = new Comment();
       
-      ret.commentId = jsonObj.get("id").getAsString();
-      ret.userName = jsonObj.get("snippet").getAsJsonObject()
-                            .get("topLevelComment").getAsJsonObject()
-                            .get("snippet").getAsJsonObject()
-                            .get("authorDisplayName").getAsString();
-      ret.profilePicture = jsonObj.get("snippet").getAsJsonObject()
-                                  .get("topLevelComment").getAsJsonObject()
-                                  .get("snippet").getAsJsonObject()
-                                  .get("authorProfileImageUrl").getAsString();
-      ret.userId = jsonObj.get("snippet").getAsJsonObject()
-                          .get("topLevelComment").getAsJsonObject()
-                          .get("snippet").getAsJsonObject()
-                          .get("authorChannelId").getAsJsonObject()
-                          .get("value").getAsString();
-      ret.commentText = jsonObj.get("snippet").getAsJsonObject()
-                               .get("topLevelComment").getAsJsonObject()
-                               .get("snippet").getAsJsonObject()
-                               .get("textDisplay").getAsString();
-      ret.publishTime = jsonObj.get("snippet").getAsJsonObject()
-                               .get("topLevelComment").getAsJsonObject()
-                               .get("snippet").getAsJsonObject()
-                               .get("publishedAt").getAsString();
-      ret.updateTime = jsonObj.get("snippet").getAsJsonObject()
+      try {
+        ret.commentId = jsonObj.get("id").getAsString();
+        ret.userName = jsonObj.get("snippet").getAsJsonObject()
                               .get("topLevelComment").getAsJsonObject()
                               .get("snippet").getAsJsonObject()
-                              .get("updatedAt").getAsString();
-      ret.likeCount = jsonObj.get("snippet").getAsJsonObject()
-                             .get("topLevelComment").getAsJsonObject()
-                             .get("snippet").getAsJsonObject()
-                             .get("likeCount").getAsInt();
-      ret.replyCount = jsonObj.get("snippet").getAsJsonObject()
-                              .get("totalReplyCount").getAsInt();
+                              .get("authorDisplayName").getAsString();
+        ret.profilePicture = jsonObj.get("snippet").getAsJsonObject()
+                                    .get("topLevelComment").getAsJsonObject()
+                                    .get("snippet").getAsJsonObject()
+                                    .get("authorProfileImageUrl").getAsString();
+        ret.userId = jsonObj.get("snippet").getAsJsonObject()
+                            .get("topLevelComment").getAsJsonObject()
+                            .get("snippet").getAsJsonObject()
+                            .get("authorChannelId").getAsJsonObject()
+                            .get("value").getAsString();
+        ret.commentText = jsonObj.get("snippet").getAsJsonObject()
+                                 .get("topLevelComment").getAsJsonObject()
+                                 .get("snippet").getAsJsonObject()
+                                 .get("textDisplay").getAsString();
+        ret.publishTime = jsonObj.get("snippet").getAsJsonObject()
+                                 .get("topLevelComment").getAsJsonObject()
+                                 .get("snippet").getAsJsonObject()
+                                 .get("publishedAt").getAsString();
+        ret.updateTime = jsonObj.get("snippet").getAsJsonObject()
+                                .get("topLevelComment").getAsJsonObject()
+                                .get("snippet").getAsJsonObject()
+                                .get("updatedAt").getAsString();
+        ret.likeCount = jsonObj.get("snippet").getAsJsonObject()
+                               .get("topLevelComment").getAsJsonObject()
+                               .get("snippet").getAsJsonObject()
+                               .get("likeCount").getAsInt();
+        ret.replyCount = jsonObj.get("snippet").getAsJsonObject()
+                                .get("totalReplyCount").getAsInt();
+      } catch (NullPointerException e) {
+        try {
+          String errorLog = "NullPointerException parsing JSON: \n" + jsonObj.getAsString();
+          errorLog += e.getMessage();
+          errorLog += "=========================================\n";
+          Files.write(Paths.get(ERROR_LOG_FILE), errorLog.getBytes(), StandardOpenOption.APPEND);
+        } catch (IOException ee) {
+          System.err.println("Error occured when writing to error log file.");
+        }
+      }
       // Optional Fields
       // If a comment is on a channel instead of a video, there would be no videoId.
       try {
@@ -351,6 +365,7 @@ public class YoutubeIndexer {
                              .get("videoId").getAsString();
       } catch (NullPointerException e) {
         // Do nothing
+        // It is expected to have comments without videoId (comments on channel)
       }
       
       return ret;
@@ -365,24 +380,35 @@ public class YoutubeIndexer {
     public static Comment parseReplyComment(JsonObject jsonObj) {
       Comment ret = new Comment();
       
-      ret.commentId = jsonObj.get("id").getAsString();
-      ret.userName = jsonObj.get("snippet").getAsJsonObject()
-                            .get("authorDisplayName").getAsString();
-      ret.profilePicture = jsonObj.get("snippet").getAsJsonObject()
-                                  .get("authorProfileImageUrl").getAsString();
-      ret.userId = jsonObj.get("snippet").getAsJsonObject()
-                          .get("authorChannelId").getAsJsonObject()
-                          .get("value").getAsString();
-      ret.commentText = jsonObj.get("snippet").getAsJsonObject()
-                               .get("textDisplay").getAsString();
-      ret.publishTime = jsonObj.get("snippet").getAsJsonObject()
-                               .get("publishedAt").getAsString();
-      ret.updateTime = jsonObj.get("snippet").getAsJsonObject()
-                              .get("updatedAt").getAsString();
-      ret.likeCount = jsonObj.get("snippet").getAsJsonObject()
-                             .get("likeCount").getAsInt();
-      ret.parentId = jsonObj.get("snippet").getAsJsonObject()
-                            .get("parentId").getAsString();
+      try {
+        ret.commentId = jsonObj.get("id").getAsString();
+        ret.userName = jsonObj.get("snippet").getAsJsonObject()
+                              .get("authorDisplayName").getAsString();
+        ret.profilePicture = jsonObj.get("snippet").getAsJsonObject()
+                                    .get("authorProfileImageUrl").getAsString();
+        ret.userId = jsonObj.get("snippet").getAsJsonObject()
+                            .get("authorChannelId").getAsJsonObject()
+                            .get("value").getAsString();
+        ret.commentText = jsonObj.get("snippet").getAsJsonObject()
+                                 .get("textDisplay").getAsString();
+        ret.publishTime = jsonObj.get("snippet").getAsJsonObject()
+                                 .get("publishedAt").getAsString();
+        ret.updateTime = jsonObj.get("snippet").getAsJsonObject()
+                                .get("updatedAt").getAsString();
+        ret.likeCount = jsonObj.get("snippet").getAsJsonObject()
+                               .get("likeCount").getAsInt();
+        ret.parentId = jsonObj.get("snippet").getAsJsonObject()
+                              .get("parentId").getAsString();
+      } catch (NullPointerException e) {
+        try {
+          String errorLog = "NullPointerException parsing JSON: \n" + jsonObj.getAsString();
+          errorLog += e.getMessage();
+          errorLog += "=========================================\n";
+          Files.write(Paths.get(ERROR_LOG_FILE), errorLog.getBytes(), StandardOpenOption.APPEND);
+        } catch (IOException ee) {
+          System.err.println("Error occured when writing to error log file.");
+        }
+      }
       
       return ret;
     }
@@ -682,7 +708,7 @@ public class YoutubeIndexer {
       System.err.println("Index is currently busy (write lock held by another indexer thread). \n"
                          + "Please wait until the current indexing finish and try again later. \n"
                          + "(Or contact the author to switch to another index for you on the "
-                         + "back-end. Making new index is currently not supported "
+                         + "back-end. Creating new index is currently not provided "
                          + "on the front-end.)");
       return;
     } catch (IOException e) {
