@@ -90,7 +90,7 @@ public class YoutubeIndexer {
     return 0;
   }
   
-  private static final String ERROR_LOG_FILE = "error_log.txt";
+  private static final String ERROR_LOG_FILE = "/home/ct1856/public_html/error_log_WSE.txt";
   private static final String URL_BASE = "https://www.googleapis.com/youtube/v3";
   private static String API_KEY = "AIzaSyDF7H_kAHJsIhijiIKU9cxZuK7sforZnIc";
   
@@ -211,9 +211,6 @@ public class YoutubeIndexer {
                        .maxBodySize(Integer.MAX_VALUE)
                        .execute();
     } catch (IOException e) {
-      System.err.println(
-          "Network error when retrieving the page: " + urlStr + ".");
-      System.err.println(e.getMessage());
       return null;
     }
     
