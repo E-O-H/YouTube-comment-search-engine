@@ -420,8 +420,8 @@ public class YoutubeIndexer {
       JsonParser parser = new JsonParser();
       JsonObject rootObj = parser.parse(response.body()).getAsJsonObject();
       JsonObject videoJson = rootObj.getAsJsonArray("items")
-                                           .get(0)
-                                           .getAsJsonObject();
+                                    .get(0)
+                                    .getAsJsonObject();
       return videoJson;
     } catch (NullPointerException e) {
       System.err.println(e);

@@ -8,6 +8,7 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause.Occur;
@@ -15,6 +16,7 @@ import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.highlight.Formatter;
 import org.apache.lucene.search.highlight.Highlighter;
@@ -53,7 +55,7 @@ public class YoutubeRetriever {
   
   @Option(name = "-username", aliases = "-un",
       usage = "Usernames to filter the search result. Double quote a username for exact match.")
-  private String usernameString;
+  private String userNameString;
   
   @Option(name = "-userId", aliases = "-ui",
       usage = "A list of user IDs to filter the search result. Separated by space.")
@@ -135,8 +137,8 @@ private File dictionaryPath;
       booleanQueryBuilder.add(commentQuery, Occur.MUST);
     }
     // Username query
-    if (usernameString != null && ! usernameString.isEmpty()) {
-      Query userNameQuery = new QueryParser("userName", analyzer).parse(usernameString);
+    if (userNameString != null && ! userNameString.isEmpty()) {
+      Query userNameQuery = new QueryParser("userName", analyzer).parse(userNameString);
       booleanQueryBuilder.add(userNameQuery, Occur.MUST);
     }
     // User Id query
@@ -211,7 +213,7 @@ private File dictionaryPath;
                            + "<a href=\"" 
                            + webpageUrl 
                            + "?commentQuery=" + suggestions[0]
-                           + "&usernameQuery=" + usernameString
+                           + "&usernameQuery=" + userNameString
                            + "&userIdQuery=" + userIdString
                            + "&videoTitleQuery=" + videoTitleString
                            + "&videoIdQuery=" + videoIdString
@@ -255,6 +257,7 @@ private File dictionaryPath;
         int docId = results[i].doc;
         Document doc = searcher.doc(docId);
         
+        // Get highlighted result
         String highlightedText;
         if (commentQueryString != null && ! commentQueryString.isEmpty()) {
           try {
@@ -267,6 +270,22 @@ private File dictionaryPath;
           // Don't call getHighlightedField() if there is no search on the field "commentText"!
           // See the NOTE section of the Javadoc of getHighlightedField().
           highlightedText = doc.get("commentText");
+        }
+        
+        // Get parent comment
+        String parentId = doc.get("parentId");
+        String parentUserId = "Not Indexed";
+        String parentUserName = "Not Indexed";
+        String parentComment = "Not Indexed";
+        if (! parentId.isEmpty()) {
+          TermQuery termQuery = new TermQuery(new Term("commentId", parentId));
+          ScoreDoc[] parentResults = searcher.search(termQuery, 1).scoreDocs;
+          if (parentResults.length != 0) {
+            int parentDocId = parentResults[0].doc;
+            parentUserId = searcher.doc(parentDocId).get("userId");
+            parentUserName = searcher.doc(parentDocId).get("userName");
+            parentComment = searcher.doc(parentDocId).get("commentText");
+          }
         }
         
         // The font is the same as that used by Youtube comments
@@ -286,7 +305,7 @@ private File dictionaryPath;
                         + "</span>"
                         + " commented on video<br>"
                         + "<table style='font-family:Roboto,Arial,sans-serif;'>"
-                        + "<td>"
+                        + "<td valign='top'>"
                           + "<a href=\"https://www.youtube.com/watch?v="
                             + doc.get("videoId")
                           + "\">"
@@ -295,7 +314,7 @@ private File dictionaryPath;
                             + "\">"
                           + "</a>"
                         + "</td>"
-                        + "<td>"
+                        + "<td valign='top'>"
                           + "<a href=\"https://www.youtube.com/watch?v="
                             + doc.get("videoId")
                           + "\">"
@@ -304,7 +323,7 @@ private File dictionaryPath;
                             + "</span>"
                           + "</a>"
                           + "<span style='font-size:0.7rem;font-weight:bold;'>" 
-                            + "<br>  from channel: "
+                            + "<br>&nbsp on channel: "
                             + "<a href=\"https://www.youtube.com/channel/"
                               + doc.get("channelId")
                             + "\">"
@@ -319,10 +338,31 @@ private File dictionaryPath;
                           + "<span style='font-size:0.9rem;margin-left:2em;'>\"" 
                             + highlightedText
                           + "\"</span>"
-                        + "</a>"
-                      + "</td>"
-                      + "</table>"
-                      + "</p>";
+                        + "</a>";
+        
+        if (! parentId.isEmpty()) {
+          html += "<span style='font-size:0.7rem;font-weight:bold;'>" 
+                  + "<br>&nbsp in reply to the following comment by "
+                  + "<a href=\"https://www.youtube.com/channel/"
+                    + parentUserId
+                  + "\">"
+                    + parentUserName
+                  + "</a>: <br>"
+                + "</span>"
+                + "<a href=\"https://www.youtube.com/watch?v="
+                  + doc.get("videoId")
+                  + "&lc="
+                  + parentId
+                + "\">"
+                  + "<span style='font-size:0.9rem;margin-left:2em;'>\"" 
+                    + parentComment
+                  + "\"</span>"
+                + "</a>";
+        }
+        
+        html += "</td>"
+                + "</table>"
+                + "</p>";
           
         System.out.println(html);
     }
@@ -400,7 +440,7 @@ private File dictionaryPath;
            + "?page=" + pageNumber
            + "&max=" + hitsPerPage
            + "&commentQuery=" + commentQueryString
-           + "&usernameQuery=" + usernameString
+           + "&usernameQuery=" + userNameString
            + "&userIdQuery=" + userIdString
            + "&videoTitleQuery=" + videoTitleString
            + "&videoIdQuery=" + videoIdString

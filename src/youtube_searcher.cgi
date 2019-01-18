@@ -1,13 +1,13 @@
 #!/bin/bash 
 
-echo "Content-type: text/html"
+echo "Content-type: text/html; charset=utf-8"
 echo ""
 
 cat << HTML_PART_1
 <!DOCTYPE html>
 <html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Youtube Comment Searcher</title>
   </head>
 <body>
