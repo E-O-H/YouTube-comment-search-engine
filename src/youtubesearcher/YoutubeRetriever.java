@@ -204,7 +204,10 @@ private File dictionaryPath;
         }
       }
       
-      String[] suggestions = suggest(commentQueryString, 1);
+      String[] suggestions = null;
+      if (commentQueryString != null && ! commentQueryString.isEmpty()) {
+        suggestions = suggest(commentQueryString, 1);
+      }
       
       System.out.println("<h2>Results for query <u>" 
                          + commentQueryString + "</u>");
@@ -462,9 +465,9 @@ private File dictionaryPath;
   private String[] suggest(String input, int num) {
     if (dictionaryPath == null) return null;
     try (Directory directory = FSDirectory.open(dictionaryPath.toPath());
-         SpellChecker spellChecker = new SpellChecker(directory)) {
+      SpellChecker spellChecker = new SpellChecker(directory)) {
       return spellChecker.suggestSimilar(input, num);
-    } catch (IOException e) {
+    } catch (IOException | NullPointerException e) {
       return null;
     }
   }
