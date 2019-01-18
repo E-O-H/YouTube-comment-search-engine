@@ -1,7 +1,9 @@
 package youtubesearcher;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -347,10 +349,14 @@ public class YoutubeIndexer {
                                 .get("totalReplyCount").getAsInt();
       } catch (NullPointerException e) {
         try {
-          String errorLog = "NullPointerException parsing JSON: \n" + jsonObj.getAsString();
-          errorLog += e.getMessage();
-          errorLog += "=========================================\n";
-          Files.write(Paths.get(ERROR_LOG_FILE), errorLog.getBytes(), StandardOpenOption.APPEND);
+          File file = new File(ERROR_LOG_FILE);
+          file.getParentFile().mkdirs();
+          PrintWriter printWriter = new PrintWriter(new FileOutputStream(file, true)); 
+                                                                               // append = true
+          printWriter.println("NullPointerException parsing JSON: \n" + jsonObj.toString());
+          e.printStackTrace(printWriter);
+          printWriter.println("=========================================");
+          printWriter.close();
         } catch (IOException ee) {
           System.err.println("Error occured when writing to error log file.");
         }
