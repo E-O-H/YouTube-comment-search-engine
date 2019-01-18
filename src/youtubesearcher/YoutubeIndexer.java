@@ -676,7 +676,7 @@ public class YoutubeIndexer {
         topLevelPageToken = topLevelPage.getNextPageToken();
         ++pageNum;
         System.out.println("DONE");
-      } while (topLevelPageToken != null);
+      } while (topLevelPageToken != null || numRetry != 0);
       
     } catch (LockObtainFailedException e) {
       System.err.println("Index is currently busy (write lock held by another indexer thread). \n"
