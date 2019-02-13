@@ -403,7 +403,7 @@ private File dictionaryPath;
       
       html += String.valueOf(page);
       
-      for (int i = page + 1; i < Math.min(page + PEEK_RANGE, lastPage); ++i) {
+      for (int i = page + 1; i <= Math.min(page + PEEK_RANGE, lastPage); ++i) {
         html += "&nbsp&nbsp" + printPageLink(i, String.valueOf(i));
       }
 
