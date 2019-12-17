@@ -2,6 +2,9 @@ package youtubesearcher;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -107,6 +110,14 @@ private File dictionaryPath;
   private IndexSearcher searcher;    // searcher object
   private BooleanQuery finalQuery;   // constructed query object
   private TopDocs docs;              // search result
+  /*
+   * URL Encoded user inputs for potentially secondary HTTP calls (clicking on links).
+   * Used in re-search links, i.e. pagination links and the suggestion link
+   */
+  private String commentQueryString_urlEncoded;
+  private String userNameString_urlEncoded;
+  private String videoTitleString_urlEncoded;
+  private String channelTitleString_urlEncoded;
   
   private void initialize() {
     try {
@@ -119,7 +130,10 @@ private File dictionaryPath;
       System.err.println("Error opening index directory" + indexDir);
       e.printStackTrace();
     }
+    
     analyzer = new StandardAnalyzer();
+    
+    urlEncodeUserInputs();
   }
   
   /**
@@ -216,11 +230,11 @@ private File dictionaryPath;
                            + "<a href=\"" 
                            + webpageUrl 
                            + "?commentQuery=" + suggestions[0]
-                           + "&usernameQuery=" + userNameString
+                           + "&usernameQuery=" + userNameString_urlEncoded
                            + "&userIdQuery=" + userIdString
-                           + "&videoTitleQuery=" + videoTitleString
+                           + "&videoTitleQuery=" + videoTitleString_urlEncoded
                            + "&videoIdQuery=" + videoIdString
-                           + "&channelTitleQuery=" + channelTitleString
+                           + "&channelTitleQuery=" + channelTitleString_urlEncoded
                            + "&channelIdQuery=" + channelIdString
                            + "&max=" + hitsPerPage
                            + "\">"
@@ -306,7 +320,7 @@ private File dictionaryPath;
                             + doc.get("userName") 
                           + "</a>"
                         + "</span>"
-                        + " commented on video<br>"
+                        + " commented:<br>"
                         + "<table style='font-family:Roboto,Arial,sans-serif;'>"
                         + "<td valign='top'>"
                           + "<a href=\"https://www.youtube.com/watch?v="
@@ -320,28 +334,13 @@ private File dictionaryPath;
                         + "<td valign='top'>"
                           + "<a href=\"https://www.youtube.com/watch?v="
                             + doc.get("videoId")
+                            + "&lc="
+                            + doc.get("commentId")
                           + "\">"
-                            + "<span style='font-size:1.2rem;font-weight:bold;'>"
-                              + doc.get("videoTitle")
-                            + "</span>"
-                          + "</a>"
-                          + "<span style='font-size:0.7rem;font-weight:bold;'>" 
-                            + "<br>&nbsp on channel: "
-                            + "<a href=\"https://www.youtube.com/channel/"
-                              + doc.get("channelId")
-                            + "\">"
-                              + doc.get("channelTitle")
-                            + "</a><br>"
-                          + "</span>"
-                        + "<a href=\"https://www.youtube.com/watch?v="
-                          + doc.get("videoId")
-                          + "&lc="
-                          + doc.get("commentId")
-                        + "\">"
-                          + "<span style='font-size:0.9rem;margin-left:2em;'>\"" 
-                            + highlightedText
-                          + "\"</span>"
-                        + "</a>";
+                            + "<span style='font-size:1.0rem;margin-left:2em;'>\"" 
+                              + highlightedText
+                            + "\"</span>"
+                          + "</a>";
         
         if (! parentId.isEmpty()) {
           html += "<span style='font-size:0.7rem;font-weight:bold;'>" 
@@ -363,9 +362,27 @@ private File dictionaryPath;
                 + "</a>";
         }
         
-        html += "</td>"
-                + "</table>"
-                + "</p>";
+        html += "<span style='font-size:1.0rem;font-weight:bold;'>" 
+                + "<br>&nbsp on video titled: "
+              + "</span>"
+              + "<a href=\"https://www.youtube.com/watch?v="
+                + doc.get("videoId")
+              + "\">"
+                + "<span style='font-size:1.0rem;font-weight:bold;'>"
+                  + doc.get("videoTitle")
+                + "</span>"
+              + "</a>"
+                + "<span style='font-size:0.7rem;font-weight:bold;'>" 
+                + "<br>&nbsp from channel: "
+                + "<a href=\"https://www.youtube.com/channel/"
+                  + doc.get("channelId")
+                + "\">"
+                  + doc.get("channelTitle")
+                + "</a><br>"
+              + "</span>"
+            + "</td>"
+          + "</table>"
+          + "</p>";
           
         System.out.println(html);
     }
@@ -442,12 +459,12 @@ private File dictionaryPath;
            + webpageUrl 
            + "?page=" + pageNumber
            + "&max=" + hitsPerPage
-           + "&commentQuery=" + commentQueryString
-           + "&usernameQuery=" + userNameString
+           + "&commentQuery=" + commentQueryString_urlEncoded
+           + "&usernameQuery=" + userNameString_urlEncoded
            + "&userIdQuery=" + userIdString
-           + "&videoTitleQuery=" + videoTitleString
+           + "&videoTitleQuery=" + videoTitleString_urlEncoded
            + "&videoIdQuery=" + videoIdString
-           + "&channelTitleQuery=" + channelTitleString
+           + "&channelTitleQuery=" + channelTitleString_urlEncoded
            + "&channelIdQuery=" + channelIdString
            + "\">"
            + anchorText
@@ -469,6 +486,38 @@ private File dictionaryPath;
       return spellChecker.suggestSimilar(input, num);
     } catch (IOException | NullPointerException e) {
       return null;
+    }
+  }
+  
+  
+  /*
+   * URL Encode user inputs for potentially secondary HTTP calls (clicking on links).
+   * Used in re-search links, i.e. pagination links and the suggestion link
+   */
+  void urlEncodeUserInputs() {
+    try {
+      commentQueryString_urlEncoded = URLEncoder.encode(commentQueryString, 
+                                                        StandardCharsets.UTF_8.toString()); 
+    } catch (UnsupportedEncodingException ex) {
+      commentQueryString_urlEncoded = commentQueryString;
+    }
+    try {
+      userNameString_urlEncoded = URLEncoder.encode(userNameString, 
+                                                    StandardCharsets.UTF_8.toString()); 
+    } catch (UnsupportedEncodingException ex) {
+      userNameString_urlEncoded = userNameString;
+    }
+    try {
+      videoTitleString_urlEncoded = URLEncoder.encode(videoTitleString, 
+                                                      StandardCharsets.UTF_8.toString()); 
+    } catch (UnsupportedEncodingException ex) {
+      videoTitleString_urlEncoded = videoTitleString;
+    }
+    try {
+      channelTitleString_urlEncoded = URLEncoder.encode(channelTitleString, 
+                                                        StandardCharsets.UTF_8.toString()); 
+    } catch (UnsupportedEncodingException ex) {
+      channelTitleString_urlEncoded = channelTitleString;
     }
   }
   
