@@ -95,6 +95,9 @@ public class YoutubeIndexer {
   private static final String ERROR_LOG_FILE = "/home/ct1856/public_html/error_log_WSE.txt";
   private static final String URL_BASE = "https://www.googleapis.com/youtube/v3";
   private static String API_KEY = "AIzaSyDF7H_kAHJsIhijiIKU9cxZuK7sforZnIc";
+                                  // This built-in key is only for emergency fall back
+                                  // in case the program fails to acquire the normal key.
+                                  // This key is already public.
   
   private static final int MAX_NETWORK_ERROR_RETRY = 9;
   
@@ -612,6 +615,7 @@ public class YoutubeIndexer {
       System.err.println("Error opening index directory " + indexDir);
       e.printStackTrace();
     }
+
     analyzer = new StandardAnalyzer();
     config = new IndexWriterConfig(analyzer);
     config.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND); // Append to existing index
@@ -652,7 +656,8 @@ public class YoutubeIndexer {
         // Handling network error (retry up to a certain times).
         if (topLevelPage == null) {
           if (numRetry == 0) {
-            System.err.println("\nNetwork error when requesting a page.");
+            System.err.println("\nPage request failed. Please check that the ID is valid "
+                               + "(if the problem persists, please contact me).");
             System.err.print("  Number of retries: 0");
           }
           if (numRetry == MAX_NETWORK_ERROR_RETRY) {
@@ -708,9 +713,11 @@ public class YoutubeIndexer {
       } while (topLevelPageToken != null || numRetry != 0);
       
     } catch (LockObtainFailedException e) {
-      System.err.println("Index is currently busy (write lock held by another indexer thread). \n"
-                         + "Please wait until the current indexing finish and try again later. \n"
-                         + "(Or contact the author to switch to another index for you on the "
+      System.err.println("The index you are writing to is currently busy "
+                         + "(i.e. the write lock is being held by another indexer thread). \n"
+                         + "Please wait until the current indexing is finished "
+                         + "and try again later. \n"
+                         + "(Or contact me to switch to another index for you on the "
                          + "back-end. Creating new index is currently not provided "
                          + "on the front-end.)");
       return;
@@ -725,7 +732,9 @@ public class YoutubeIndexer {
   public static void main(String[] args) {
     YoutubeIndexer youtubeIndexer = new YoutubeIndexer();
     youtubeIndexer.parseArgs(args);
-    if (youtubeIndexer.apiKey != null) API_KEY = youtubeIndexer.apiKey;
+    if (youtubeIndexer.apiKey != null && ! youtubeIndexer.apiKey.isEmpty()) {
+      API_KEY = youtubeIndexer.apiKey;
+    }
     Scope scope = null;
     if (youtubeIndexer.isVideo) {
       scope = Scope.VIDEO;

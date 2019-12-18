@@ -65,6 +65,12 @@ if [[ -n "$QUERY_STRING" ]]; then
     
     classpath="/home/ct1856/public_html/java-bin/"
     indexpath="/home/ct1856/public_html/WSE-project-index-files/index"
+    apikeypath="/home/ct1856/public_html/WSE-project-Google-API-keys/API_key_Youtube_Data_API_V3.txt"
+    API_KEY=""
+    if [ -r "$apikeypath" ]; then
+      API_KEY=$(<"$apikeypath")
+    fi
+
     # This trick allows a program to run in the background while at the same time, output can be captured
     # in real-time before the program is finished, which allows the shell script to move on (in this case it
     # captures the URL that hosts the output of the indexer and renders a hyper-link with it on the webpage).
@@ -80,7 +86,7 @@ if [[ -n "$QUERY_STRING" ]]; then
     # (Also note that you cannot add an & at the end of the exec command. It will break the program. However 
     # you CAN add a & INSIDE the process substitution, but it is not necessary, as the process substitution itself
     # is already running in the background.)
-    exec 3< <(java -cp "${classpath}/args4j-2.33.jar:${classpath}/jsoup-1.11.3/jsoup-1.11.3.jar:${classpath}/lucene-6.6.0/core/lucene-core-6.6.0.jar:${classpath}/gson-2.6.2.jar:${classpath}:bin:." youtubesearcher.YoutubeIndexer -p "$indexpath" "$indexScopeFlag" -i "$indexScopeId" \
+    exec 3< <(java -cp "${classpath}/args4j-2.33.jar:${classpath}/jsoup-1.11.3/jsoup-1.11.3.jar:${classpath}/lucene-6.6.0/core/lucene-core-6.6.0.jar:${classpath}/gson-2.6.2.jar:${classpath}:bin:." youtubesearcher.YoutubeIndexer -p "$indexpath" "$indexScopeFlag" -i "$indexScopeId" -k "$API_KEY" \
               2>&1 | nc seashells.io 1337)
     sleep 0.1                                  # sleep 100ms to make sure the output by nc (our URL) is already written to fd3.
     read <&3 discard discard indexProgressUrl  # Read one line from fd3 and assign content starting from the 3rd token to $indexProgressUrl.
@@ -153,8 +159,7 @@ JAVASCRIPT
 # log this visit
 cat >>youtube_searcher_visitors_log.txt << LOG_FILE_CONTENT
 ********************
-Timestamp: $(date +"%D %T")
-IP Address: $REMOTE_ADDR Port: $REMOTE_PORT Hostname: $REMOTE_HOST
+Timestamp: $(date +"%D %T") IP Address: $REMOTE_ADDR Port: $REMOTE_PORT Hostname: $REMOTE_HOST
 Query: $QUERY_STRING
 Referer: $HTTP_REFERER
 User Agent: $HTTP_USER_AGENT
