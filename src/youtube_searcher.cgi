@@ -98,7 +98,7 @@ cat << HTML_PART_2
     </td>
   </table>
 <b>Can't find the comment you are looking for? Maybe it hasn't been indexed.</b> If the video containing the comments you are searching for has not yet been indexed, you need to first add the video to the index using the right panel. There is also an option to index all videos in a channel at once, but please think twice before you decide to use this feature, as it will take a REALLY long time if the channel has a lot of videos. You can find the video ID in the URL to a video; for channel IDs, you need to find them in the page source in a variable named "externalId".<br>
-<i>Tips: you can leave the search box blank and only fill in the filters, e.g. to search for all comments from a user. To filter for multiple users/videos/channels, separate them with spaces; to match exact names, use double quotes. If you want to see the comment thread of a reply, you can click on it to jump to the thread.</i>
+<i><b>Tips: you can leave the search box blank and only fill in the filters, e.g. to search for all comments from a user. To filter for multiple users/videos/channels, separate them with spaces; to match an exact phrase or sentence with multiple words, use double quotes. Clicking on a comment will bring you to its Youtube page with that comment being highlighted at the top of the comment section.</b></i>
 <hr>
 <style type="text/css">
   a {text-decoration: none;}
@@ -146,13 +146,13 @@ fi
 # fill in input fields from URL variables
 cat << JAVASCRIPT
   <script>
-    document.getElementsByName("commentQuery")[0].setAttribute("value", "$commentQuery");
-    document.getElementsByName("usernameQuery")[0].setAttribute("value", "$usernameQuery");
-    document.getElementsByName("userIdQuery")[0].setAttribute("value", "$userIdQuery");
-    document.getElementsByName("videoTitleQuery")[0].setAttribute("value", "$videoTitleQuery");
-    document.getElementsByName("videoIdQuery")[0].setAttribute("value", "$videoIdQuery");
-    document.getElementsByName("channelTitleQuery")[0].setAttribute("value", "$channelTitleQuery");
-    document.getElementsByName("channelIdQuery")[0].setAttribute("value", "$channelIdQuery");
+    document.getElementsByName("commentQuery")[0].setAttribute("value", '$commentQuery');
+    document.getElementsByName("usernameQuery")[0].setAttribute("value", '$usernameQuery');
+    document.getElementsByName("userIdQuery")[0].setAttribute("value", '$userIdQuery');
+    document.getElementsByName("videoTitleQuery")[0].setAttribute("value", '$videoTitleQuery');
+    document.getElementsByName("videoIdQuery")[0].setAttribute("value", '$videoIdQuery');
+    document.getElementsByName("channelTitleQuery")[0].setAttribute("value", '$channelTitleQuery');
+    document.getElementsByName("channelIdQuery")[0].setAttribute("value", '$channelIdQuery');
   </script>
 JAVASCRIPT
 
