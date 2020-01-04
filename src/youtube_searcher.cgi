@@ -13,7 +13,7 @@ cat << HTML_PART_1
 <body>
   <center><h1>Youtube Comment Searcher</h1></center>
   <table border=4>
-    <td>
+    <td width="105px">
       <form method=GET action="${SCRIPT_NAME}">
         <h2>
           <b>Please type your query here: </b>
@@ -23,27 +23,27 @@ cat << HTML_PART_1
         </h2>
         <table>
           <tr><td>Username:<input type="text" name="usernameQuery" size=20></td>
-              <td>User ID:<input type="text" name="userIdQuery" size=19></td>
+              <td>User ID:<input type="text" name="userIdQuery" size=15></td>
               <td>Video title:<input type="text" name="videoTitleQuery" size=20></td>
-              <td>Video ID:<input type="text" name="videoIdQuery" size=19></td>
+              <td>Video ID:<input type="text" name="videoIdQuery" size=15></td>
               <td>Channel title:<input type="text" name="channelTitleQuery" size=20></td>
-              <td>Channel ID:<input type="text" name="channelIdQuery" size=19></td></tr>
+              <td>Channel ID:<input type="text" name="channelIdQuery" size=15></td></tr>
         </table>
       </form>
     </td>
     <td>
       <form method=GET action="${SCRIPT_NAME}">
         <h2>
-          Add Index here:<br>
+          Add new video to index here:&nbsp;&nbsp;<br>
         </h2>
           <b>Index scope </b>
           <input type="radio" name="indexScope" value="video" checked="checked">Video
           <input type="radio" name="indexScope" value="channel">Channel
           <br>
           <b>Video/Channel ID </b>
-          <input type=text name="indexScopeId" size=12>
+          <input type=text name="indexScopeId" size=21>
           <br>
-          <input type=submit value="Index all comments in specified scope">
+          <center><input type=submit style="font-size: 16px;" value="Index all comments in specified scope"></center>
       </form>
 HTML_PART_1
 
@@ -97,7 +97,7 @@ fi
 cat << HTML_PART_2
     </td>
   </table>
-<b>Can't find the comment you are looking for? Maybe it hasn't been indexed.</b> If the video containing the comments you are searching for has not yet been indexed, you need to first add the video to the index using the right panel. There is also an option to index all videos in a channel at once, but please think twice before you decide to use this feature, as it will take a REALLY long time if the channel has a lot of videos. You can find the video ID in the URL to a video; for channel IDs, you need to find them in the page source in a variable named "externalId".<br>
+  <b>To find a comment, the video page containing it must first be indexed.</b> If the video containing the comments you are searching for has not yet been indexed, you need to first add the video to the index using the right panel. There is also an option to index all videos in a channel at once, but please think twice before you decide to use this feature, as it will take a REALLY long time if the channel has a lot of videos. You can find the video ID in the URL to a video; for channel IDs, you can find them in the page source in a variable named "externalId". (This demo does not index new videos automatically, as it will take up too much storage; I only have 4GB of storage quota so please refrain from indexing too many videos; manually adding to the index is fine, just please don't use any automatic script.)<br>
 <i><b>Tips: you can leave the search box blank and only fill in the filters, e.g. to search for all comments from a user. To filter for multiple users/videos/channels, separate them with spaces; to match an exact phrase or sentence with multiple words, use double quotes. Clicking on a comment will bring you to its Youtube page with that comment being highlighted at the top of the comment section.</b></i>
 <hr>
 <style type="text/css">
